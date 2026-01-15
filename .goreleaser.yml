@@ -1,0 +1,142 @@
+# GoReleaser configuration for Fast File Deletion
+# Requirements: 9.1, 9.2
+
+version: 2
+
+before:
+  hooks:
+    # Run tests before building
+    - go test ./...
+    - go mod tidy
+
+builds:
+  - id: fast-file-deletion
+    main: ./cmd/fast-file-deletion
+    binary: fast-file-deletion
+    
+    # Build flags for smaller binaries
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    
+    # Target platforms
+    goos:
+      - windows
+      - linux
+      - darwin
+    
+    goarch:
+      - amd64
+      - arm64
+    
+    # Ignore combinations that don't make sense
+    ignore:
+      - goos: darwin
+        goarch: "386"
+    
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - id: default
+    format: tar.gz
+    
+    # Use zip for Windows
+    format_overrides:
+      - goos: windows
+        format: zip
+    
+    # Archive name template
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    
+    # Files to include in archive
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG.md
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Performance Improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: yourusername
+    name: fast-file-deletion
+  
+  # Release notes
+  header: |
+    ## Fast File Deletion {{ .Tag }}
+    
+    High-performance file deletion tool optimized for Windows.
+  
+  footer: |
+    ## Installation
+    
+    Download the appropriate binary for your platform from the assets below.
+    
+    ### Windows
+    ```powershell
+    # Download and extract the Windows binary
+    # Add to PATH for easy access
+    ```
+    
+    ### Linux/macOS
+    ```bash
+    # Download and extract the binary
+    tar -xzf fast-file-deletion_*_linux_amd64.tar.gz
+    chmod +x fast-file-deletion
+    sudo mv fast-file-deletion /usr/local/bin/
+    ```
+    
+    ### Go Install
+    ```bash
+    go install github.com/yourusername/fast-file-deletion/cmd/fast-file-deletion@{{ .Tag }}
+    ```
+  
+  # Disable draft releases
+  draft: false
+  
+  # Mark as prerelease if version contains alpha, beta, or rc
+  prerelease: auto
+  
+  # Release name template
+  name_template: "{{.ProjectName}} {{.Version}}"
+
+# Announce releases (optional - requires configuration)
+# announce:
+#   twitter:
+#     enabled: false
+#   discord:
+#     enabled: false

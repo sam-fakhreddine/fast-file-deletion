@@ -1,0 +1,75 @@
+# 2026/01/14 19:37:16.356033 [TestAgeBasedFilteringProperty] [rapid] draw keepDays: 1
+# 2026/01/14 19:37:16.356036 [TestAgeBasedFilteringProperty] [rapid] draw numFiles: 4
+# 2026/01/14 19:37:16.356037 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_0.txt"
+# 2026/01/14 19:37:16.356038 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 0
+# 2026/01/14 19:37:16.356038 [TestAgeBasedFilteringProperty] [rapid] draw hoursOffset: 0
+# 2026/01/14 19:37:16.356103 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_0.txt"
+# 2026/01/14 19:37:16.356103 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 0
+# 2026/01/14 19:37:16.356104 [TestAgeBasedFilteringProperty] [rapid] draw hoursOffset: 0
+# 2026/01/14 19:37:16.356146 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_0.txt"
+# 2026/01/14 19:37:16.356147 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 1
+# 2026/01/14 19:37:16.356147 [TestAgeBasedFilteringProperty] [rapid] draw hoursOffset: 1
+# 2026/01/14 19:37:16.356196 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_0.txt"
+# 2026/01/14 19:37:16.356197 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 0
+# 2026/01/14 19:37:16.356197 [TestAgeBasedFilteringProperty] [rapid] draw hoursOffset: 0
+# 2026/01/14 19:37:16.356281 [TestAgeBasedFilteringProperty] Expected 1 files marked for deletion, got 0
+# 
+v0.4.8#3306408543128473397
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x3
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

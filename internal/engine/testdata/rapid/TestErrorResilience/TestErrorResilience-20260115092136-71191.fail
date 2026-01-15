@@ -1,0 +1,323 @@
+# 2026/01/15 09:21:36.173583 [TestErrorResilience] [rapid] draw numFiles: 5
+# 2026/01/15 09:21:36.173596 [TestErrorResilience] [rapid] draw numRestrictedFiles: 2
+# 2026/01/15 09:21:36.173596 [TestErrorResilience] [rapid] draw restrictedIdx: 0
+# 2026/01/15 09:21:36.173597 [TestErrorResilience] [rapid] draw restrictedIdx: 0
+# 2026/01/15 09:21:36.173597 [TestErrorResilience] [rapid] draw restrictedIdx: 1
+# 2026/01/15 09:21:36.173598 [TestErrorResilience] [rapid] draw contentSize: 16
+# 2026/01/15 09:21:36.173599 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173599 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173599 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173600 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173600 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173600 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173601 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173601 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173601 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173601 [TestErrorResilience] [rapid] draw contentByte: 17
+# 2026/01/15 09:21:36.173602 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173603 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173603 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173603 [TestErrorResilience] [rapid] draw contentByte: 8
+# 2026/01/15 09:21:36.173604 [TestErrorResilience] [rapid] draw contentByte: 4
+# 2026/01/15 09:21:36.173604 [TestErrorResilience] [rapid] draw contentByte: 245
+# 2026/01/15 09:21:36.173675 [TestErrorResilience] [rapid] draw contentSize: 10
+# 2026/01/15 09:21:36.173676 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173676 [TestErrorResilience] [rapid] draw contentByte: 3
+# 2026/01/15 09:21:36.173676 [TestErrorResilience] [rapid] draw contentByte: 5
+# 2026/01/15 09:21:36.173676 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173677 [TestErrorResilience] [rapid] draw contentByte: 30
+# 2026/01/15 09:21:36.173677 [TestErrorResilience] [rapid] draw contentByte: 46
+# 2026/01/15 09:21:36.173677 [TestErrorResilience] [rapid] draw contentByte: 210
+# 2026/01/15 09:21:36.173678 [TestErrorResilience] [rapid] draw contentByte: 90
+# 2026/01/15 09:21:36.173678 [TestErrorResilience] [rapid] draw contentByte: 192
+# 2026/01/15 09:21:36.173678 [TestErrorResilience] [rapid] draw contentByte: 151
+# 2026/01/15 09:21:36.173758 [TestErrorResilience] [rapid] draw contentSize: 22
+# 2026/01/15 09:21:36.173759 [TestErrorResilience] [rapid] draw contentByte: 39
+# 2026/01/15 09:21:36.173760 [TestErrorResilience] [rapid] draw contentByte: 166
+# 2026/01/15 09:21:36.173760 [TestErrorResilience] [rapid] draw contentByte: 59
+# 2026/01/15 09:21:36.173760 [TestErrorResilience] [rapid] draw contentByte: 39
+# 2026/01/15 09:21:36.173761 [TestErrorResilience] [rapid] draw contentByte: 15
+# 2026/01/15 09:21:36.173761 [TestErrorResilience] [rapid] draw contentByte: 2
+# 2026/01/15 09:21:36.173761 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173761 [TestErrorResilience] [rapid] draw contentByte: 13
+# 2026/01/15 09:21:36.173762 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173762 [TestErrorResilience] [rapid] draw contentByte: 81
+# 2026/01/15 09:21:36.173762 [TestErrorResilience] [rapid] draw contentByte: 116
+# 2026/01/15 09:21:36.173763 [TestErrorResilience] [rapid] draw contentByte: 213
+# 2026/01/15 09:21:36.173763 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173763 [TestErrorResilience] [rapid] draw contentByte: 3
+# 2026/01/15 09:21:36.173763 [TestErrorResilience] [rapid] draw contentByte: 13
+# 2026/01/15 09:21:36.173763 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173764 [TestErrorResilience] [rapid] draw contentByte: 11
+# 2026/01/15 09:21:36.173764 [TestErrorResilience] [rapid] draw contentByte: 12
+# 2026/01/15 09:21:36.173764 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173764 [TestErrorResilience] [rapid] draw contentByte: 87
+# 2026/01/15 09:21:36.173765 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173765 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173828 [TestErrorResilience] [rapid] draw contentSize: 11
+# 2026/01/15 09:21:36.173829 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173829 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173829 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173829 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173830 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173830 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173830 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173830 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173831 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173831 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173831 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173889 [TestErrorResilience] [rapid] draw contentSize: 11
+# 2026/01/15 09:21:36.173889 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173891 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173891 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173891 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173891 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173891 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173892 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173892 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.173892 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173892 [TestErrorResilience] [rapid] draw contentByte: 1
+# 2026/01/15 09:21:36.173893 [TestErrorResilience] [rapid] draw contentByte: 0
+# 2026/01/15 09:21:36.174348 [TestErrorResilience] Expected some failures due to restricted permissions, but got 0 failures
+# 
+v0.4.8#10336808324925078850
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x1
+0x0
+0x6b74f03291620
+0x6
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1090d611dc0d00
+0x11
+0x1a790ff5f9fae1
+0x6f005640111e2
+0x1
+0x1d8115d4022a13
+0x107e3e1a42d8b0
+0x0
+0x9467f62e206e6
+0x2fd937b96ad25
+0x1
+0x14ea5bcfb01a64
+0xd43f3408ed744
+0x8
+0x9814be35c6ca4
+0x786240eb10e17
+0x4
+0x194c0586cbe3d3
+0x1451f4558c63dd
+0xf5
+0x1f50b866261cf1
+0x11b4654497d94
+0x0
+0x188061ab7e12bc
+0x4d28d287bae95
+0x0
+0xea0bfb1431fb0
+0x1dd9892d3a3cfd
+0x3
+0x1e5a4307efdbb5
+0xbf739dcc743be
+0x5
+0xf0f6695bb7264
+0x2ff3484a736ac
+0x0
+0xe38fe3115c936
+0x111f279e9ad167
+0x1e
+0x11d0e3b62c4411
+0x133bf3111efaa7
+0x2e
+0xb656e8a594bcf
+0x139aa5c812dd4e
+0xd2
+0x1f6683fe76cb6e
+0x121a179bc6b886
+0x5a
+0x1ea5be7f8552c1
+0x15c431c27ecb6a
+0xc0
+0x9b0b05cfcc912
+0x1ca864e768bb4d
+0x97
+0x15211631140b00
+0x9a3fbc0739547
+0xc
+0x1ecdcaff6647c6
+0x17e231625599d3
+0x27
+0x121f9ababaa3f4
+0x19cee5045084ed
+0xa6
+0x1b33fb92baf98
+0x1276e16f414a23
+0x3b
+0x175f3f2dac274
+0x1ab82b4dc3e99a
+0x27
+0x851e2f332e72f
+0x15515a3073794c
+0xf
+0x9595b2ebc094d
+0x66795c3fe9306
+0x2
+0x12a1c7faa0f6f3
+0x40679db820b10
+0x0
+0x1910b5bd156feb
+0xadde842f9af89
+0xd
+0x1d1ac5fbd9f7b7
+0x4c645a64d8c27
+0x0
+0x1fc9ef7e1e92d9
+0x19aabdc114d04b
+0x51
+0x36a3b20acdc19
+0x11e79c053a1e8c
+0x74
+0x1af464d67c105f
+0x13da4f098fd187
+0xd5
+0x8bc04f3b65b80
+0xb22b22523665
+0x0
+0x1c5c8385610816
+0x433b575feeab1
+0x3
+0x1cfcd2ee90b38d
+0x9b8c4e1167d6f
+0xd
+0xf76c51d15514c
+0xb9dc5258179dd
+0x1
+0xbb070c29c59d5
+0xa8ac6af29b716
+0xb
+0x1f51533ba87a6a
+0xa27b3cc8c3aea
+0xc
+0x75aa8f249a482
+0x117b8d2f34f99
+0x1
+0xb437eb3e4178f
+0x110676a40f1bb7
+0x57
+0x2b5573aa93709
+0x0
+0x1
+0xfcd6191e7cf71
+0x13
+0x0
+0x1a1d5f4407e6f
+0x1
+0x1
+0x998f1de13df1e
+0xb
+0x1
+0x7d1f02f4c3d8b
+0x1
+0x0
+0x10b3331941b9bd
+0x42
+0x0
+0x1967958b44d7af
+0x83
+0x1
+0xe4da5d4e7d287
+0xd
+0x0
+0x19495b97e135d3
+0x1d
+0x1
+0x194532aa789140
+0x48
+0x1
+0x954a62455cb36
+0x5
+0x1
+0x1850798654ec5a
+0xd2
+0x0
+0x1637e6082ff40b
+0x9d
+0x0
+0x139fb8763413e7
+0xc8
+0x0
+0x191b0f13de7275
+0xf6
+0x1
+0x18c404000b8175
+0x17
+0x1
+0x18df90d089f525
+0x12
+0x0
+0x1aaa6a49936965
+0xf6
+0x0
+0x17cbc9258ed2d2
+0x0
+0x1
+0xc3b63556a18e9
+0x18
+0x0
+0xca1f52724c7f2
+0x1e
+0x0
+0x9ea852cf4ec68
+0x7
+0x1
+0x19e70e42b5d7e4
+0x52
+0x0
+0x5be67a923d4b2
+0x2
+0x1
+0x1d64206aa50767
+0x82
+0x1
+0xc94d95f7d0a6c
+0x1
+0x0

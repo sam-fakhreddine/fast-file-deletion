@@ -1,0 +1,146 @@
+# 2026/01/14 19:36:05.307780 [TestAgeBasedFilteringProperty] [rapid] draw keepDays: 3
+# 2026/01/14 19:36:05.307781 [TestAgeBasedFilteringProperty] [rapid] draw numFiles: 5
+# 2026/01/14 19:36:05.307784 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_03.txt"
+# 2026/01/14 19:36:05.307787 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 0
+# 2026/01/14 19:36:05.307876 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_240821.txt"
+# 2026/01/14 19:36:05.307877 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 3
+# 2026/01/14 19:36:05.307955 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_0371.txt"
+# 2026/01/14 19:36:05.307956 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 2
+# 2026/01/14 19:36:05.308043 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_5193.txt"
+# 2026/01/14 19:36:05.308046 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 16
+# 2026/01/14 19:36:05.308123 [TestAgeBasedFilteringProperty] [rapid] draw fileName: "file_00471.txt"
+# 2026/01/14 19:36:05.308124 [TestAgeBasedFilteringProperty] [rapid] draw daysOld: 16
+# 2026/01/14 19:36:05.308255 [TestAgeBasedFilteringProperty] File /var/folders/f3/z3g2rrn560q_6fl14zjmw_z80000gn/T/TestAgeBasedFilteringProperty1385379177/004/file_240821.txt was marked for deletion but should be retained (age: 72h0m0.000378s, threshold: 72h0m0s)
+# 
+v0.4.8#3721659623403851210
+0x1dc31546041d4e
+0x57bbb39f20629
+0x2
+0x18b1bbe6107fdc
+0x89433ec3c1b81
+0x4
+0x0
+0x936fcb7ceb58c
+0x0
+0x2f71541722616
+0x0
+0x1fe85ac734e16d
+0x0
+0x5af768e339f6d
+0x3
+0x1110bcfb02d8
+0x0
+0x44094a3b79d70
+0x418bba4c21bbe
+0x0
+0x0
+0x1854f4ce2b1ac7
+0x0
+0xf3c9cd7abc79d
+0x2
+0x1dd6e728800a7f
+0x0
+0xceba5bb2c38ae
+0xc
+0x4
+0xded85a48a7331
+0x0
+0x25013baed5d60
+0x0
+0x5df6d8fb04747
+0x0
+0x159e6fe23d4b00
+0xc
+0x8
+0x1e815a4426e5c7
+0x0
+0x8c3eac1325b01
+0x2
+0x11906a3c22fade
+0x0
+0x3670b24bc65f6
+0x1
+0x2c9964868be9e
+0x0
+0xeeb1935d31873
+0x6a63539a57acc
+0x3
+0x0
+0x16362cec8cec07
+0x0
+0x1f2a901e4d7236
+0x0
+0x1cbb383403c111
+0x0
+0x10f7b22b70b6c8
+0x3
+0x1c1caa8bd5083a
+0x0
+0x17fe4b6642cf31
+0xe
+0xe
+0x7
+0xa74c45081908b
+0x0
+0xb7e872f9abcc3
+0x1
+0xa551257c454e
+0x0
+0x1b155dbb43e4ca
+0x44f005775ebad
+0x2
+0x0
+0xc140861d8865d
+0x0
+0xf505b6dcbf820
+0xb
+0xc
+0xb
+0x5
+0x199fe0520b54ef
+0x0
+0x66f7742215acf
+0x1
+0xd2072e62ceb08
+0x0
+0x1f21a52f6ab287
+0xf
+0x9
+0x145353b6beb2fe
+0x0
+0x1d7c7fe6b9626d
+0x3
+0x1ad00b57ab931
+0x0
+0x1fd1d562480b2c
+0x115c87c590a61a
+0x10
+0x0
+0x83a1b7858070b
+0x0
+0x643c833c2038a
+0x0
+0x18626fec2b003d
+0x0
+0x118795dc4fdfe9
+0x0
+0x1e2a06d693e4d1
+0x0
+0x17cb517c0dc508
+0x4
+0x17dba2d849327d
+0x0
+0xf384884ce2445
+0xf
+0xd
+0xe
+0x7
+0xd3f2edeb2f051
+0x0
+0x35cf24d9b4fff
+0x1
+0x37f10422c2c7
+0x0
+0xcb7f4b48ab274
+0xc31fbcce3baa9
+0x10

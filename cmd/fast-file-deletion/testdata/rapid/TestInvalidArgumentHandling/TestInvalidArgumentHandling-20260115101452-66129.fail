@@ -1,0 +1,17 @@
+# 2026/01/15 10:14:52.283616 [TestInvalidArgumentHandling] [rapid] draw invalidScenario: 2
+# 2026/01/15 10:14:52.283631 [TestInvalidArgumentHandling] [rapid] draw randomPath: "--"
+# 2026/01/15 10:14:52.283633 [TestInvalidArgumentHandling] Scenario 'positional argument instead of flag': Expected error for invalid arguments, but got none. Config: <nil>
+# 
+v0.4.8#13792153884943280085
+0x0
+0x38e38e38e38e4
+0x2
+0x0
+0x0
+0x0
+0x0
+0x5555555555555
+0x0
+0x0
+0x0
+0x0
