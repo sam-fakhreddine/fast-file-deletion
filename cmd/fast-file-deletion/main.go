@@ -67,20 +67,60 @@ func main() {
 	os.Exit(exitCode)
 }
 
-// initializeMemoryLimit sets Go's soft memory limit to 25% of system RAM.
-// This gives Go more headroom, reduces GC pressure, and improves performance.
-// On a 32GB system, this sets the limit to 8GB instead of Go's default ~1GB.
+// initializeMemoryLimit sets Go's soft memory limit based on system RAM.
+// Uses the lower of: 25% of system RAM OR 6GB (whichever is smaller).
+// This gives Go more headroom, reduces GC pressure, and improves performance
+// while preventing excessive memory usage on large systems.
+//
+// Examples:
+//   - 32GB system: min(8GB, 6GB) = 6GB
+//   - 16GB system: min(4GB, 6GB) = 4GB
+//   - 8GB system:  min(2GB, 6GB) = 2GB
 func initializeMemoryLimit() {
-	totalRAM := getTotalSystemMemory()
-	if totalRAM > 0 {
-		// Set limit to 25% of system RAM
-		memLimit := int64(float64(totalRAM) * 0.25)
-		debug.SetMemoryLimit(memLimit)
+	// Check if GOMEMLIMIT is already set by user
+	if os.Getenv("GOMEMLIMIT") != "" {
+		fmt.Fprintf(os.Stderr, "Using GOMEMLIMIT from environment (user override)\n")
+		return
+	}
 
-		// Log the new limit (converted to human-readable format)
-		memLimitMB := memLimit / (1024 * 1024)
-		totalRAMMB := totalRAM / (1024 * 1024)
-		fmt.Fprintf(os.Stderr, "Go memory limit set to %d MB (25%% of %d MB system RAM)\n",
+	totalRAM := getTotalSystemMemory()
+	if totalRAM <= 0 {
+		fmt.Fprintf(os.Stderr, "Warning: Could not detect system memory, using Go defaults\n")
+		return
+	}
+
+	// Calculate 25% of system RAM
+	percentLimit := int64(float64(totalRAM) * 0.25)
+
+	// Cap at 6GB maximum
+	const maxLimit = 6 * 1024 * 1024 * 1024 // 6GB in bytes
+	memLimit := percentLimit
+	if memLimit > maxLimit {
+		memLimit = maxLimit
+	}
+
+	// Set minimum of 512MB (safety floor for small systems)
+	const minLimit = 512 * 1024 * 1024 // 512MB in bytes
+	if memLimit < minLimit {
+		memLimit = minLimit
+	}
+
+	// Apply the limit
+	debug.SetMemoryLimit(memLimit)
+
+	// Log the decision (converted to human-readable format)
+	memLimitMB := memLimit / (1024 * 1024)
+	totalRAMMB := totalRAM / (1024 * 1024)
+	percentLimitMB := percentLimit / (1024 * 1024)
+
+	if memLimit == maxLimit {
+		fmt.Fprintf(os.Stderr, "Go memory limit: %d MB (capped at 6GB, 25%% of %d MB would be %d MB)\n",
+			memLimitMB, totalRAMMB, percentLimitMB)
+	} else if memLimit == minLimit {
+		fmt.Fprintf(os.Stderr, "Go memory limit: %d MB (minimum floor, 25%% of %d MB would be %d MB)\n",
+			memLimitMB, totalRAMMB, percentLimitMB)
+	} else {
+		fmt.Fprintf(os.Stderr, "Go memory limit: %d MB (25%% of %d MB system RAM)\n",
 			memLimitMB, totalRAMMB)
 	}
 }
