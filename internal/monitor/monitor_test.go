@@ -171,7 +171,7 @@ func TestBottleneckDetection(t *testing.T) {
 		{
 			name: "memory pressure",
 			metrics: SystemMetrics{
-				AllocMB:       170,
+				AllocMB:       192,  // 96% of SysMB (exceeds 95% threshold)
 				SysMB:         200,
 				CPUPercent:    30,
 			},
@@ -215,8 +215,9 @@ func TestBottleneckDetection(t *testing.T) {
 
 func TestMemoryPressureThreshold(t *testing.T) {
 	// Verify the threshold constant is what we expect
-	if MemoryPressureThreshold != 0.8 {
-		t.Errorf("MemoryPressureThreshold = %f, want 0.8", MemoryPressureThreshold)
+	// Increased from 0.8 to 0.95 to reduce false positives (1GB usage on 32GB system is fine)
+	if MemoryPressureThreshold != 0.95 {
+		t.Errorf("MemoryPressureThreshold = %f, want 0.95", MemoryPressureThreshold)
 	}
 	if GCPressureThreshold != 2.0 {
 		t.Errorf("GCPressureThreshold = %f, want 2.0", GCPressureThreshold)

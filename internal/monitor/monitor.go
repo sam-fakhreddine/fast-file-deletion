@@ -16,11 +16,14 @@ import (
 // Bottleneck detection thresholds.
 const (
 	// MemoryPressureThreshold is the fraction of Sys memory that triggers a warning.
-	MemoryPressureThreshold = 0.8
+	// Increased from 0.8 to 0.95 - 1GB usage for 2M files is normal, not a bottleneck.
+	MemoryPressureThreshold = 0.95
 	// GCPressureThreshold is the GC cycles/sec rate that triggers a warning.
 	GCPressureThreshold = 2.0
 	// CPUSaturationThreshold is the CPU usage percentage that triggers a warning.
 	CPUSaturationThreshold = 90.0
+	// BottleneckWarningCooldown is the minimum time between bottleneck warnings.
+	BottleneckWarningCooldown = 60 * time.Second
 )
 
 // SystemMetrics contains a snapshot of system resource usage at a point in time.
@@ -58,6 +61,11 @@ type Monitor struct {
 	lastGCPauseNs   uint64
 	lastCPUTime     time.Duration
 	lastMeasureTime time.Time
+
+	// Warning cooldown timestamps to prevent log spam
+	lastMemoryWarning time.Time
+	lastGCWarning     time.Time
+	lastCPUWarning    time.Time
 }
 
 // NewMonitor creates a new system resource monitor.
@@ -164,20 +172,29 @@ func (m *Monitor) recordMetrics(metrics SystemMetrics) {
 }
 
 // logBottlenecks logs warnings when resource bottlenecks are detected.
+// Warnings are rate-limited to once per BottleneckWarningCooldown to prevent log spam.
 func (m *Monitor) logBottlenecks(metrics SystemMetrics) {
-	if metrics.MemoryPressure {
-		logger.Warning("BOTTLENECK: Memory pressure detected (%.1f MB / %.1f MB = %.1f%%)",
-			metrics.AllocMB, metrics.SysMB, (metrics.AllocMB/metrics.SysMB)*100)
+	now := time.Now()
+
+	// Memory pressure warning (with cooldown)
+	if metrics.MemoryPressure && now.Sub(m.lastMemoryWarning) >= BottleneckWarningCooldown {
+		logger.Warning("BOTTLENECK: Memory pressure detected (%.1f MB / %.1f MB = %.1f%%, threshold: %.0f%%)",
+			metrics.AllocMB, metrics.SysMB, (metrics.AllocMB/metrics.SysMB)*100, MemoryPressureThreshold*100)
+		m.lastMemoryWarning = now
 	}
 
-	if metrics.GCPressure {
+	// GC pressure warning (with cooldown)
+	if metrics.GCPressure && now.Sub(m.lastGCWarning) >= BottleneckWarningCooldown {
 		logger.Warning("BOTTLENECK: GC pressure detected (%.1f ms pause in last interval)",
 			metrics.GCPauseMs)
+		m.lastGCWarning = now
 	}
 
-	if metrics.CPUSaturated {
+	// CPU saturation warning (with cooldown)
+	if metrics.CPUSaturated && now.Sub(m.lastCPUWarning) >= BottleneckWarningCooldown {
 		logger.Warning("BOTTLENECK: CPU saturation detected (%d goroutines on %d CPUs = %.1f%%)",
 			metrics.NumGoroutines, metrics.NumCPU, metrics.CPUPercent)
+		m.lastCPUWarning = now
 	}
 
 	// Log detailed metrics every 10 seconds
