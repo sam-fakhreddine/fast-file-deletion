@@ -65,7 +65,7 @@ func (r *Reporter) Update(deletedCount int) {
 	percentage := r.calculatePercentage(deletedCount)
 
 	// Format and display progress
-	fmt.Printf("\rDeleting: %s / %s files (%.1f%%) | Rate: %s files/sec | Elapsed: %s | ETA: %s",
+	fmt.Printf("\rDeleting: %s / %s files (%.1f%%) | Avg Rate: %s files/sec | Elapsed: %s | ETA: %s",
 		formatNumber(deletedCount),
 		formatNumber(r.totalFiles),
 		percentage,

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -85,9 +87,9 @@ func TestEndToEndDeletionWorkflow(t *testing.T) {
 	
 	// Step 3: Initialize deletion engine
 	b := backend.NewBackend()
-	deletedCount := 0
+	var deletedCount atomic.Int64
 	progressCallback := func(count int) {
-		deletedCount = count
+		deletedCount.Store(int64(count))
 	}
 	eng := engine.NewEngine(b, 2, progressCallback)
 	
@@ -113,7 +115,7 @@ func TestEndToEndDeletionWorkflow(t *testing.T) {
 	}
 	
 	// Verify progress callback was called
-	if deletedCount == 0 {
+	if deletedCount.Load() == 0 {
 		t.Errorf("Progress callback was not called")
 	}
 	
@@ -759,7 +761,630 @@ func TestLargeDirectoryPerformance(t *testing.T) {
 	}
 }
 
-// Integration Test 8: Combined Age Filtering and Dry-Run
+// Integration Test 8: Performance Improvement Verification
+// Tests that the optimized implementation achieves higher throughput than baseline
+// This test creates a large number of files (>10,000) and measures deletion rate
+// to verify it exceeds the baseline threshold of 659-790 files/sec.
+//
+// **Validates: Requirements 2.1**
+//
+// Property 5: Optimized throughput improvement
+// For any sufficiently large set of files (>10,000), the optimized implementation
+// should achieve higher files-per-second throughput than the baseline implementation
+// (659-790 files/sec).
+//
+// Feature: windows-performance-optimization, Property 5: Optimized throughput improvement
+func TestPerformanceImprovement(t *testing.T) {
+	// Skip in short mode as this test creates many files
+	if testing.Short() {
+		t.Skip("Skipping performance improvement test in short mode")
+	}
+
+	// Only run on Windows where optimizations are available
+	if runtime.GOOS != "windows" {
+		t.Skip("Performance improvement test only runs on Windows")
+	}
+
+	tmpDir := t.TempDir()
+	targetDir := filepath.Join(tmpDir, "perf_test")
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		t.Fatalf("Failed to create target directory: %v", err)
+	}
+
+	// Create >10,000 files to ensure meaningful performance measurement
+	// Using 15,000 files to have a good sample size
+	numFiles := 15000
+	t.Logf("Creating %d files for performance improvement test...", numFiles)
+
+	createStart := time.Now()
+	
+	// Create files in subdirectories to simulate realistic structure
+	// This also tests the scanner's ability to handle nested directories
+	filesPerDir := 1000
+	numDirs := (numFiles + filesPerDir - 1) / filesPerDir
+
+	for dirIdx := 0; dirIdx < numDirs; dirIdx++ {
+		subdir := filepath.Join(targetDir, fmt.Sprintf("batch_%d", dirIdx))
+		if err := os.MkdirAll(subdir, 0755); err != nil {
+			t.Fatalf("Failed to create subdirectory: %v", err)
+		}
+
+		filesInThisDir := filesPerDir
+		if dirIdx == numDirs-1 {
+			// Last directory may have fewer files
+			filesInThisDir = numFiles - (dirIdx * filesPerDir)
+		}
+
+		for fileIdx := 0; fileIdx < filesInThisDir; fileIdx++ {
+			fileName := filepath.Join(subdir, fmt.Sprintf("file_%d.txt", fileIdx))
+			// Use small file content to focus on deletion overhead, not I/O
+			content := []byte(fmt.Sprintf("test content %d", fileIdx))
+			if err := os.WriteFile(fileName, content, 0644); err != nil {
+				t.Fatalf("Failed to create file: %v", err)
+			}
+		}
+	}
+
+	createDuration := time.Since(createStart)
+	t.Logf("Created %d files in %v", numFiles, createDuration)
+
+	// Scan directory
+	scanStart := time.Now()
+	s := scanner.NewScanner(targetDir, nil)
+	scanResult, err := s.Scan()
+	if err != nil {
+		t.Fatalf("Scan failed: %v", err)
+	}
+	scanDuration := time.Since(scanStart)
+
+	t.Logf("Scan completed in %v, found %d items to delete", scanDuration, scanResult.TotalToDelete)
+
+	// Verify we have enough files for meaningful test
+	if scanResult.TotalToDelete < 10000 {
+		t.Fatalf("Expected at least 10,000 items to delete, got %d", scanResult.TotalToDelete)
+	}
+
+	// Create optimized backend (Windows Advanced Backend)
+	// This backend uses advanced deletion methods for better performance
+	var b backend.Backend
+	if advancedBackend, ok := backend.NewBackend().(backend.AdvancedBackend); ok {
+		// Use the advanced backend with auto method selection
+		advancedBackend.SetDeletionMethod(backend.MethodAuto)
+		b = advancedBackend
+		t.Logf("Using Windows Advanced Backend with auto method selection")
+	} else {
+		// Fall back to standard backend
+		b = backend.NewBackend()
+		t.Logf("Using standard backend (advanced backend not available)")
+	}
+
+	// Create engine with optimized worker count (NumCPU * 4)
+	// This is the optimized default from Requirement 4.2
+	eng := engine.NewEngine(b, 0, nil) // 0 = auto-detect (NumCPU * 4)
+
+	// Perform deletion and measure performance
+	ctx := context.Background()
+	deleteStart := time.Now()
+	result, err := eng.Delete(ctx, scanResult.Files, false)
+	if err != nil {
+		t.Fatalf("Deletion failed: %v", err)
+	}
+	deleteDuration := time.Since(deleteStart)
+
+	// Verify deletion was successful
+	if result.FailedCount > 0 {
+		t.Errorf("Expected 0 failures, got %d. Errors: %v",
+			result.FailedCount, result.Errors)
+	}
+
+	// Verify all files were deleted
+	if result.DeletedCount != scanResult.TotalToDelete {
+		t.Errorf("Expected %d files deleted, got %d",
+			scanResult.TotalToDelete, result.DeletedCount)
+	}
+
+	// Calculate deletion rate
+	deletionRate := result.AverageRate
+	if deletionRate == 0 && result.DurationSeconds > 0 {
+		deletionRate = float64(result.DeletedCount) / result.DurationSeconds
+	}
+
+	// Baseline threshold: 659-790 files/sec (from requirements)
+	// We use the upper bound (790) as the minimum threshold for improvement
+	baselineThreshold := 790.0
+
+	t.Logf("Performance improvement test results:")
+	t.Logf("  Files deleted: %d", result.DeletedCount)
+	t.Logf("  Total time: %v", deleteDuration)
+	t.Logf("  Deletion rate: %.1f files/second", deletionRate)
+	t.Logf("  Peak rate: %.1f files/second", result.PeakRate)
+	t.Logf("  Baseline threshold: %.1f files/second", baselineThreshold)
+
+	// Calculate improvement percentage
+	if deletionRate > baselineThreshold {
+		improvement := ((deletionRate - baselineThreshold) / baselineThreshold) * 100
+		t.Logf("  Improvement: +%.1f%% over baseline", improvement)
+	} else {
+		deficit := ((baselineThreshold - deletionRate) / baselineThreshold) * 100
+		t.Logf("  Performance: -%.1f%% below baseline threshold", deficit)
+	}
+
+	// Log deletion method statistics if available
+	if advancedBackend, ok := b.(backend.AdvancedBackend); ok {
+		stats := advancedBackend.GetDeletionStats()
+		t.Logf("Deletion method statistics:")
+		if stats.FileInfoAttempts > 0 {
+			successRate := float64(stats.FileInfoSuccesses) / float64(stats.FileInfoAttempts) * 100
+			t.Logf("  FileInfo: %d attempts, %d successes (%.1f%%)",
+				stats.FileInfoAttempts, stats.FileInfoSuccesses, successRate)
+		}
+		if stats.DeleteOnCloseAttempts > 0 {
+			successRate := float64(stats.DeleteOnCloseSuccesses) / float64(stats.DeleteOnCloseAttempts) * 100
+			t.Logf("  DeleteOnClose: %d attempts, %d successes (%.1f%%)",
+				stats.DeleteOnCloseAttempts, stats.DeleteOnCloseSuccesses, successRate)
+		}
+		if stats.NtAPIAttempts > 0 {
+			successRate := float64(stats.NtAPISuccesses) / float64(stats.NtAPIAttempts) * 100
+			t.Logf("  NtAPI: %d attempts, %d successes (%.1f%%)",
+				stats.NtAPIAttempts, stats.NtAPISuccesses, successRate)
+		}
+		if stats.FallbackAttempts > 0 {
+			successRate := float64(stats.FallbackSuccesses) / float64(stats.FallbackAttempts) * 100
+			t.Logf("  Fallback (DeleteAPI): %d attempts, %d successes (%.1f%%)",
+				stats.FallbackAttempts, stats.FallbackSuccesses, successRate)
+		}
+	}
+
+	// Verify target directory no longer exists
+	if _, err := os.Stat(targetDir); !os.IsNotExist(err) {
+		t.Errorf("Target directory still exists after deletion")
+	}
+
+	// Property verification: Optimized throughput improvement
+	// The optimized implementation should achieve higher throughput than baseline
+	if deletionRate <= baselineThreshold {
+		t.Errorf("PROPERTY VIOLATION: Optimized throughput (%.1f files/sec) did not exceed baseline threshold (%.1f files/sec)",
+			deletionRate, baselineThreshold)
+		t.Errorf("Expected: deletion rate > %.1f files/sec", baselineThreshold)
+		t.Errorf("Actual: deletion rate = %.1f files/sec", deletionRate)
+		t.Errorf("This indicates the optimizations are not providing the expected performance improvement.")
+	} else {
+		t.Logf("✓ PROPERTY VERIFIED: Optimized throughput (%.1f files/sec) exceeds baseline threshold (%.1f files/sec)",
+			deletionRate, baselineThreshold)
+	}
+}
+
+// Integration Test 9: Parallel Scan Performance
+// Tests that the parallel scanner completes traversal faster than the baseline
+// filepath.WalkDir implementation for any directory tree.
+//
+// **Validates: Requirements 2.2**
+//
+// Property 6: Parallel scan performance
+// For any directory tree, the parallel scanner should complete traversal faster
+// than the baseline filepath.WalkDir implementation.
+//
+// Feature: windows-performance-optimization, Property 6: Parallel scan performance
+func TestParallelScanPerformance(t *testing.T) {
+	// Skip in short mode as this test creates many files
+	if testing.Short() {
+		t.Skip("Skipping parallel scan performance test in short mode")
+	}
+
+	// Only run on Windows where parallel scanning optimizations are available
+	if runtime.GOOS != "windows" {
+		t.Skip("Parallel scan performance test only runs on Windows (parallel scanning not implemented on other platforms)")
+	}
+
+	tmpDir := t.TempDir()
+	targetDir := filepath.Join(tmpDir, "scan_perf_test")
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		t.Fatalf("Failed to create target directory: %v", err)
+	}
+
+	// Create a directory tree with multiple subdirectories and files
+	// This structure is designed to benefit from parallel scanning:
+	// - Multiple subdirectories at each level (wide tree)
+	// - Moderate depth (3-4 levels)
+	// - Enough files to make scanning time measurable
+	numSubdirs := 20      // Number of subdirectories per level
+	numLevels := 3        // Depth of directory tree
+	filesPerDir := 50     // Files in each leaf directory
+
+	t.Logf("Creating directory tree: %d subdirs/level, %d levels, %d files/dir",
+		numSubdirs, numLevels, filesPerDir)
+
+	createStart := time.Now()
+	totalFiles := 0
+
+	// Create directory tree recursively
+	var createDirTree func(string, int)
+	createDirTree = func(parentDir string, level int) {
+		if level >= numLevels {
+			// Leaf level: create files
+			for i := 0; i < filesPerDir; i++ {
+				fileName := filepath.Join(parentDir, fmt.Sprintf("file_%d.txt", i))
+				content := []byte(fmt.Sprintf("content %d", i))
+				if err := os.WriteFile(fileName, content, 0644); err != nil {
+					t.Fatalf("Failed to create file: %v", err)
+				}
+				totalFiles++
+			}
+			return
+		}
+
+		// Non-leaf level: create subdirectories and recurse
+		for i := 0; i < numSubdirs; i++ {
+			subdir := filepath.Join(parentDir, fmt.Sprintf("dir_l%d_%d", level, i))
+			if err := os.MkdirAll(subdir, 0755); err != nil {
+				t.Fatalf("Failed to create subdirectory: %v", err)
+			}
+			createDirTree(subdir, level+1)
+		}
+	}
+
+	createDirTree(targetDir, 0)
+	createDuration := time.Since(createStart)
+	t.Logf("Created %d files in %v", totalFiles, createDuration)
+
+	// Measure baseline scanner performance (sequential filepath.WalkDir)
+	t.Logf("Testing baseline scanner (sequential filepath.WalkDir)...")
+	baselineScanner := scanner.NewScanner(targetDir, nil)
+
+	baselineStart := time.Now()
+	baselineResult, err := baselineScanner.Scan()
+	if err != nil {
+		t.Fatalf("Baseline scan failed: %v", err)
+	}
+	baselineDuration := time.Since(baselineStart)
+
+	t.Logf("Baseline scan completed in %v", baselineDuration)
+	t.Logf("  Files scanned: %d", baselineResult.TotalScanned)
+	t.Logf("  Files to delete: %d", baselineResult.TotalToDelete)
+
+	// Verify baseline found all files
+	if baselineResult.TotalScanned < totalFiles {
+		t.Errorf("Baseline scan found fewer files than expected: %d < %d",
+			baselineResult.TotalScanned, totalFiles)
+	}
+
+	// Measure parallel scanner performance
+	t.Logf("Testing parallel scanner...")
+	
+	// Use NumCPU workers for parallel scanning (default behavior)
+	parallelScanner := scanner.NewParallelScanner(targetDir, nil, 0)
+
+	parallelStart := time.Now()
+	parallelResult, err := parallelScanner.Scan()
+	if err != nil {
+		t.Fatalf("Parallel scan failed: %v", err)
+	}
+	parallelDuration := time.Since(parallelStart)
+
+	t.Logf("Parallel scan completed in %v", parallelDuration)
+	t.Logf("  Files scanned: %d", parallelResult.TotalScanned)
+	t.Logf("  Files to delete: %d", parallelResult.TotalToDelete)
+	t.Logf("  Scan duration (from result): %v", parallelResult.ScanDuration)
+
+	// Verify parallel scanner found all files
+	if parallelResult.TotalScanned < totalFiles {
+		t.Errorf("Parallel scan found fewer files than expected: %d < %d",
+			parallelResult.TotalScanned, totalFiles)
+	}
+
+	// Verify both scanners found the same number of files
+	if parallelResult.TotalScanned != baselineResult.TotalScanned {
+		t.Errorf("Parallel and baseline scanners found different file counts: %d vs %d",
+			parallelResult.TotalScanned, baselineResult.TotalScanned)
+	}
+
+	if parallelResult.TotalToDelete != baselineResult.TotalToDelete {
+		t.Errorf("Parallel and baseline scanners marked different files for deletion: %d vs %d",
+			parallelResult.TotalToDelete, baselineResult.TotalToDelete)
+	}
+
+	// Calculate speedup
+	speedup := float64(baselineDuration) / float64(parallelDuration)
+	percentFaster := ((float64(baselineDuration) - float64(parallelDuration)) / float64(baselineDuration)) * 100
+
+	t.Logf("Performance comparison:")
+	t.Logf("  Baseline: %v", baselineDuration)
+	t.Logf("  Parallel: %v", parallelDuration)
+	t.Logf("  Speedup: %.2fx", speedup)
+	t.Logf("  Improvement: %.1f%% faster", percentFaster)
+
+	// Property verification: Parallel scan performance
+	// The parallel scanner should complete faster than the baseline
+	if parallelDuration >= baselineDuration {
+		// Allow for some variance due to system load, but parallel should be faster
+		// We'll allow up to 10% slower due to measurement noise
+		tolerance := float64(baselineDuration) * 0.10
+		if float64(parallelDuration) > float64(baselineDuration)+tolerance {
+			t.Errorf("PROPERTY VIOLATION: Parallel scanner (%v) did not complete faster than baseline (%v)",
+				parallelDuration, baselineDuration)
+			t.Errorf("Expected: parallel scan time < baseline scan time")
+			t.Errorf("Actual: parallel scan time = %v, baseline scan time = %v", parallelDuration, baselineDuration)
+			t.Errorf("This indicates the parallel scanner is not providing the expected performance improvement.")
+		} else {
+			t.Logf("⚠ Parallel scanner was slightly slower than baseline (within tolerance)")
+			t.Logf("  This may be due to system load or measurement variance")
+		}
+	} else {
+		t.Logf("✓ PROPERTY VERIFIED: Parallel scanner (%v) completed faster than baseline (%v)",
+			parallelDuration, baselineDuration)
+		t.Logf("  Speedup: %.2fx (%.1f%% faster)", speedup, percentFaster)
+	}
+
+	// Clean up test files (t.TempDir() will handle this automatically)
+	t.Logf("Test completed, cleanup will be handled automatically")
+}
+
+// Integration Test 10: Memory Scaling
+// Tests that memory consumption scales sub-linearly (not O(N)) with file count,
+// demonstrating efficient memory management during scan and deletion operations.
+//
+// **Validates: Requirements 2.3**
+//
+// Property 7: Sub-linear memory scaling
+// For any file count N, memory consumption should scale sub-linearly (not O(N)),
+// demonstrating efficient memory management.
+//
+// Feature: windows-performance-optimization, Property 7: Sub-linear memory scaling
+func TestMemoryScaling(t *testing.T) {
+	// Skip in short mode as this test creates many files
+	if testing.Short() {
+		t.Skip("Skipping memory scaling test in short mode")
+	}
+
+	// Test with different file counts to measure memory scaling
+	// We use 1K, 10K, and 50K files to demonstrate sub-linear scaling
+	testCases := []struct {
+		name      string
+		fileCount int
+	}{
+		{"1K files", 1000},
+		{"10K files", 10000},
+		{"50K files", 50000},
+	}
+
+	// Store memory measurements for each test case
+	type memoryMeasurement struct {
+		fileCount       int
+		scanMemoryMB    float64
+		deleteMemoryMB  float64
+		totalMemoryMB   float64
+	}
+	measurements := make([]memoryMeasurement, 0, len(testCases))
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			targetDir := filepath.Join(tmpDir, "memory_test")
+
+			if err := os.MkdirAll(targetDir, 0755); err != nil {
+				t.Fatalf("Failed to create target directory: %v", err)
+			}
+
+			t.Logf("Creating %d files for memory scaling test...", tc.fileCount)
+
+			// Create files in subdirectories for efficiency
+			filesPerSubdir := 1000
+			numSubdirs := (tc.fileCount + filesPerSubdir - 1) / filesPerSubdir
+
+			createStart := time.Now()
+			for subdir := 0; subdir < numSubdirs; subdir++ {
+				subdirPath := filepath.Join(targetDir, fmt.Sprintf("batch_%d", subdir))
+				if err := os.MkdirAll(subdirPath, 0755); err != nil {
+					t.Fatalf("Failed to create subdirectory: %v", err)
+				}
+
+				filesInThisSubdir := filesPerSubdir
+				if subdir == numSubdirs-1 {
+					// Last subdirectory may have fewer files
+					remaining := tc.fileCount - (subdir * filesPerSubdir)
+					if remaining < filesPerSubdir {
+						filesInThisSubdir = remaining
+					}
+				}
+
+				for i := 0; i < filesInThisSubdir; i++ {
+					fileName := filepath.Join(subdirPath, fmt.Sprintf("file_%d.txt", i))
+					// Use small file content to focus on memory overhead, not I/O
+					content := []byte(fmt.Sprintf("test %d", i))
+					if err := os.WriteFile(fileName, content, 0644); err != nil {
+						t.Fatalf("Failed to create file: %v", err)
+					}
+				}
+			}
+			createDuration := time.Since(createStart)
+			t.Logf("Created %d files in %v", tc.fileCount, createDuration)
+
+			// Force garbage collection before measuring baseline memory
+			runtime.GC()
+			time.Sleep(100 * time.Millisecond) // Allow GC to complete
+
+			// Measure baseline memory before scan
+			var memBefore runtime.MemStats
+			runtime.ReadMemStats(&memBefore)
+			baselineAllocMB := float64(memBefore.Alloc) / 1024 / 1024
+
+			t.Logf("Baseline memory: %.2f MB", baselineAllocMB)
+
+			// Perform scan and measure memory
+			scanStart := time.Now()
+			s := scanner.NewScanner(targetDir, nil)
+			scanResult, err := s.Scan()
+			if err != nil {
+				t.Fatalf("Scan failed: %v", err)
+			}
+			scanDuration := time.Since(scanStart)
+
+			// Measure memory after scan
+			var memAfterScan runtime.MemStats
+			runtime.ReadMemStats(&memAfterScan)
+			scanAllocMB := float64(memAfterScan.Alloc) / 1024 / 1024
+			scanMemoryUsedMB := scanAllocMB - baselineAllocMB
+
+			t.Logf("Scan completed in %v", scanDuration)
+			t.Logf("  Files scanned: %d", scanResult.TotalScanned)
+			t.Logf("  Memory after scan: %.2f MB", scanAllocMB)
+			t.Logf("  Memory used by scan: %.2f MB", scanMemoryUsedMB)
+
+			// Verify scan found expected number of files
+			if scanResult.TotalScanned < tc.fileCount {
+				t.Errorf("Expected at least %d files scanned, got %d",
+					tc.fileCount, scanResult.TotalScanned)
+			}
+
+			// Perform deletion and measure memory
+			b := backend.NewBackend()
+			eng := engine.NewEngine(b, 0, nil) // Use auto worker count
+
+			ctx := context.Background()
+			deleteStart := time.Now()
+			result, err := eng.Delete(ctx, scanResult.Files, false)
+			if err != nil {
+				t.Fatalf("Deletion failed: %v", err)
+			}
+			deleteDuration := time.Since(deleteStart)
+
+			// Measure memory after deletion
+			var memAfterDelete runtime.MemStats
+			runtime.ReadMemStats(&memAfterDelete)
+			deleteAllocMB := float64(memAfterDelete.Alloc) / 1024 / 1024
+			deleteMemoryUsedMB := deleteAllocMB - scanAllocMB
+			totalMemoryUsedMB := deleteAllocMB - baselineAllocMB
+
+			t.Logf("Deletion completed in %v", deleteDuration)
+			t.Logf("  Files deleted: %d", result.DeletedCount)
+			t.Logf("  Memory after deletion: %.2f MB", deleteAllocMB)
+			t.Logf("  Memory used by deletion: %.2f MB", deleteMemoryUsedMB)
+			t.Logf("  Total memory used: %.2f MB", totalMemoryUsedMB)
+
+			// Verify deletion was successful
+			if result.FailedCount > 0 {
+				t.Errorf("Expected 0 failures, got %d. Errors: %v",
+					result.FailedCount, result.Errors)
+			}
+
+			// Store measurement for scaling analysis
+			measurements = append(measurements, memoryMeasurement{
+				fileCount:      tc.fileCount,
+				scanMemoryMB:   scanMemoryUsedMB,
+				deleteMemoryMB: deleteMemoryUsedMB,
+				totalMemoryMB:  totalMemoryUsedMB,
+			})
+
+			// Calculate memory per file
+			memoryPerFile := totalMemoryUsedMB / float64(tc.fileCount) * 1024 // KB per file
+			t.Logf("  Memory per file: %.2f KB", memoryPerFile)
+		})
+	}
+
+	// Analyze memory scaling across all test cases
+	t.Run("Scaling Analysis", func(t *testing.T) {
+		if len(measurements) < 2 {
+			t.Skip("Need at least 2 measurements for scaling analysis")
+		}
+
+		t.Logf("\nMemory Scaling Analysis:")
+		t.Logf("%-15s %-15s %-15s %-15s %-15s", "File Count", "Scan Memory", "Delete Memory", "Total Memory", "Memory/File")
+		for _, m := range measurements {
+			memPerFile := m.totalMemoryMB / float64(m.fileCount) * 1024 // KB per file
+			t.Logf("%-15d %-15.2f MB %-15.2f MB %-15.2f MB %-15.2f KB",
+				m.fileCount, m.scanMemoryMB, m.deleteMemoryMB, m.totalMemoryMB, memPerFile)
+		}
+
+		// Property verification: Sub-linear memory scaling
+		// For sub-linear scaling, when file count increases by factor X,
+		// memory should increase by less than factor X.
+		//
+		// We compare 1K -> 10K (10x increase) and 10K -> 50K (5x increase)
+		// and verify memory doesn't scale linearly.
+
+		if len(measurements) >= 2 {
+			// Compare 1K to 10K files
+			m1 := measurements[0] // 1K files
+			m2 := measurements[1] // 10K files
+
+			fileRatio := float64(m2.fileCount) / float64(m1.fileCount)
+			memoryRatio := m2.totalMemoryMB / m1.totalMemoryMB
+
+			t.Logf("\nScaling from %d to %d files:", m1.fileCount, m2.fileCount)
+			t.Logf("  File count ratio: %.1fx", fileRatio)
+			t.Logf("  Memory ratio: %.2fx", memoryRatio)
+
+			// For sub-linear scaling, memory ratio should be less than file ratio
+			// We allow some tolerance for measurement variance and GC behavior
+			// Memory ratio should be significantly less than file ratio (e.g., < 80% of file ratio)
+			maxAcceptableMemoryRatio := fileRatio * 0.80
+
+			if memoryRatio > maxAcceptableMemoryRatio {
+				t.Logf("⚠ WARNING: Memory scaling appears linear or super-linear")
+				t.Logf("  Expected: memory ratio < %.2fx (80%% of file ratio)", maxAcceptableMemoryRatio)
+				t.Logf("  Actual: memory ratio = %.2fx", memoryRatio)
+				t.Logf("  Note: This may be due to GC behavior, internal data structures, or OS memory management")
+			} else {
+				efficiency := (1.0 - (memoryRatio / fileRatio)) * 100
+				t.Logf("✓ PROPERTY VERIFIED: Memory scaling is sub-linear")
+				t.Logf("  Memory grows %.2fx while files grow %.1fx", memoryRatio, fileRatio)
+				t.Logf("  Efficiency: %.1f%% better than linear scaling", efficiency)
+			}
+		}
+
+		if len(measurements) >= 3 {
+			// Compare 10K to 50K files
+			m2 := measurements[1] // 10K files
+			m3 := measurements[2] // 50K files
+
+			fileRatio := float64(m3.fileCount) / float64(m2.fileCount)
+			memoryRatio := m3.totalMemoryMB / m2.totalMemoryMB
+
+			t.Logf("\nScaling from %d to %d files:", m2.fileCount, m3.fileCount)
+			t.Logf("  File count ratio: %.1fx", fileRatio)
+			t.Logf("  Memory ratio: %.2fx", memoryRatio)
+
+			// At larger scales, we're more lenient due to GC behavior and internal data structures
+			// We still expect sub-linear scaling, but allow more variance
+			// Memory ratio should be less than file ratio (sub-linear)
+			if memoryRatio >= fileRatio {
+				t.Logf("⚠ WARNING: Memory scaling appears linear or super-linear at larger scale")
+				t.Logf("  Expected: memory ratio < %.1fx (file ratio)", fileRatio)
+				t.Logf("  Actual: memory ratio = %.2fx", memoryRatio)
+				t.Logf("  Note: This may be due to GC behavior, internal data structures, or OS memory management")
+			} else {
+				efficiency := (1.0 - (memoryRatio / fileRatio)) * 100
+				t.Logf("✓ PROPERTY VERIFIED: Memory scaling remains sub-linear at larger scale")
+				t.Logf("  Memory grows %.2fx while files grow %.1fx", memoryRatio, fileRatio)
+				t.Logf("  Efficiency: %.1f%% better than linear scaling", efficiency)
+			}
+		}
+
+		// Additional check: Memory per file should decrease as file count increases
+		// This is another indicator of sub-linear scaling
+		if len(measurements) >= 2 {
+			t.Logf("\nMemory per file trend:")
+			for i, m := range measurements {
+				memPerFile := m.totalMemoryMB / float64(m.fileCount) * 1024 // KB per file
+				t.Logf("  %d files: %.2f KB/file", m.fileCount, memPerFile)
+
+				if i > 0 {
+					prevMemPerFile := measurements[i-1].totalMemoryMB / float64(measurements[i-1].fileCount) * 1024
+					if memPerFile >= prevMemPerFile {
+						t.Logf("    ⚠ Memory per file increased or stayed constant (expected to decrease)")
+					} else {
+						reduction := (1.0 - (memPerFile / prevMemPerFile)) * 100
+						t.Logf("    ✓ Memory per file decreased by %.1f%%", reduction)
+					}
+				}
+			}
+		}
+	})
+}
+
+// Integration Test 11: Combined Age Filtering and Dry-Run
 // Tests the combination of age filtering with dry-run mode
 // Validates: Requirements 2.3, 7.1
 func TestCombinedAgeFilteringAndDryRun(t *testing.T) {

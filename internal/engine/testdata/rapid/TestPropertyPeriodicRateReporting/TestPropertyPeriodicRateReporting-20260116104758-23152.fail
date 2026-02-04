@@ -1,0 +1,14 @@
+# 2026/01/16 10:47:58.596300 [TestPropertyPeriodicRateReporting] [rapid] draw fileCount: 2000
+# 2026/01/16 10:47:58.596311 [TestPropertyPeriodicRateReporting] [rapid] draw workers: 2
+# 2026/01/16 10:47:58.758787 [TestPropertyPeriodicRateReporting] Deletion completed in 0.04s with 2 workers
+# 2026/01/16 10:47:58.758790 [TestPropertyPeriodicRateReporting] Processed 2000 files at 46742.6 files/sec average
+# 2026/01/16 10:47:58.758792 [TestPropertyPeriodicRateReporting] Collected 0 rate samples (expected ~0)
+# 2026/01/16 10:47:58.758792 [TestPropertyPeriodicRateReporting] Peak rate: 46742.6 files/sec
+# 
+v0.4.8#896204037093978779
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

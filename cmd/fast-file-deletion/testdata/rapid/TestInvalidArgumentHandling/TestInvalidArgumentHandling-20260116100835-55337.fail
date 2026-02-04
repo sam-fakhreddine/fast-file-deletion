@@ -1,0 +1,11 @@
+# 2026/01/16 10:08:35.651507 [TestInvalidArgumentHandling] [rapid] draw invalidScenario: 0
+# 2026/01/16 10:08:35.651510 [TestInvalidArgumentHandling] [rapid] draw negativeKeepDays: -2
+# 2026/01/16 10:08:35.651513 [TestInvalidArgumentHandling] Scenario 'negative keep-days value': Expected error for invalid arguments, but got none. Config: &{TargetDir:/tmp/test Force:false DryRun:false Verbose:false LogFile: KeepDays:<nil> Workers:0 BufferSize:0 DeletionMethod:auto Benchmark:false}
+# 
+v0.4.8#4823549799657658807
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

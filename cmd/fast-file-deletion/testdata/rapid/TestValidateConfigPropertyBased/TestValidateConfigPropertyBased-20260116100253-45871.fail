@@ -1,0 +1,27 @@
+# 2026/01/16 10:02:53.707803 [TestValidateConfigPropertyBased] [rapid] draw scenario: 0
+# 2026/01/16 10:02:53.707805 [TestValidateConfigPropertyBased] [rapid] draw workers: 0
+# 2026/01/16 10:02:53.707806 [TestValidateConfigPropertyBased] [rapid] draw bufferSize: 0
+# 2026/01/16 10:02:53.707807 [TestValidateConfigPropertyBased] [rapid] draw method: 0
+# 2026/01/16 10:02:53.707807 [TestValidateConfigPropertyBased] [rapid] draw force: false
+# 2026/01/16 10:02:53.707808 [TestValidateConfigPropertyBased] [rapid] draw dryRun: false
+# 2026/01/16 10:02:53.707808 [TestValidateConfigPropertyBased] [rapid] draw verbose: false
+# 2026/01/16 10:02:53.707808 [TestValidateConfigPropertyBased] [rapid] draw hasBenchmark: true
+# 2026/01/16 10:02:53.707809 [TestValidateConfigPropertyBased] Scenario 'valid random configuration': Expected no error for valid configuration, but got: --benchmark flag is only available on Windows. Config: {TargetDir:/tmp/test Force:false DryRun:false Verbose:false LogFile: KeepDays:<nil> Workers:0 BufferSize:0 DeletionMethod:auto Benchmark:true}
+# 
+v0.4.8#10558406898883827415
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1

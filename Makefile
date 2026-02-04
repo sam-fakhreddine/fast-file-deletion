@@ -78,17 +78,41 @@ build-all: clean build-windows build-linux build-darwin
 	@echo "All builds complete!"
 	@ls -lh $(BUILD_DIR)
 
-# Run tests
+# Run tests (quick mode, no verbose output to prevent crashes)
 .PHONY: test
 test:
-	@echo "Running tests..."
-	@go test ./... -v
+	@echo "Running tests in quick mode..."
+	@go test ./...
+
+# Run tests in quick mode (explicit)
+.PHONY: test-quick
+test-quick:
+	@echo "Running tests in quick mode..."
+	@TEST_INTENSITY=quick go test ./...
+
+# Run tests in thorough mode
+.PHONY: test-thorough
+test-thorough:
+	@echo "Running tests in thorough mode..."
+	@TEST_INTENSITY=thorough go test ./...
+
+# Run stress tests only
+.PHONY: test-stress
+test-stress:
+	@echo "Running stress tests..."
+	@go test -tags=stress ./...
+
+# Run all tests (thorough mode + stress tests)
+.PHONY: test-all
+test-all:
+	@echo "Running all tests (thorough + stress)..."
+	@TEST_INTENSITY=thorough go test -tags=stress ./...
 
 # Run tests with race detection
 .PHONY: test-race
 test-race:
 	@echo "Running tests with race detection..."
-	@go test -race ./... -v
+	@go test -race ./...
 
 # Run tests with coverage
 .PHONY: test-coverage
@@ -97,6 +121,35 @@ test-coverage:
 	@go test -cover ./... -coverprofile=coverage.out
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+# Run benchmarks (Windows only)
+.PHONY: benchmark
+benchmark:
+	@echo "Running Go benchmarks..."
+	@go test -bench=. -benchmem ./internal/backend
+
+# Verify Windows-specific code compiles
+.PHONY: verify-windows
+verify-windows:
+	@echo "Verifying Windows-specific code compiles..."
+	@GOOS=windows GOARCH=amd64 go build -o /dev/null ./cmd/fast-file-deletion
+	@echo "✓ Windows AMD64 code compiles successfully"
+	@GOOS=windows GOARCH=arm64 go build -o /dev/null ./cmd/fast-file-deletion
+	@echo "✓ Windows ARM64 code compiles successfully"
+
+# Verify generic code compiles on all platforms
+.PHONY: verify-all
+verify-all:
+	@echo "Verifying code compiles on all platforms..."
+	@GOOS=windows GOARCH=amd64 go build -o /dev/null ./cmd/fast-file-deletion
+	@echo "✓ Windows AMD64"
+	@GOOS=linux GOARCH=amd64 go build -o /dev/null ./cmd/fast-file-deletion
+	@echo "✓ Linux AMD64"
+	@GOOS=darwin GOARCH=amd64 go build -o /dev/null ./cmd/fast-file-deletion
+	@echo "✓ macOS AMD64"
+	@GOOS=darwin GOARCH=arm64 go build -o /dev/null ./cmd/fast-file-deletion
+	@echo "✓ macOS ARM64"
+	@echo "All platforms compile successfully!"
 
 # Install locally
 .PHONY: install
@@ -107,25 +160,162 @@ install:
 # Show help
 .PHONY: help
 help:
-	@echo "Fast File Deletion - Build Targets"
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║         Fast File Deletion - Build & Test Targets             ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "Targets:"
-	@echo "  all                  - Clean and build Windows binaries (default)"
-	@echo "  clean                - Remove build artifacts"
-	@echo "  build-windows        - Build all Windows binaries"
-	@echo "  build-windows-amd64  - Build Windows AMD64 binary"
-	@echo "  build-windows-arm64  - Build Windows ARM64 binary"
-	@echo "  build-linux          - Build all Linux binaries (for testing)"
-	@echo "  build-linux-amd64    - Build Linux AMD64 binary"
-	@echo "  build-linux-arm64    - Build Linux ARM64 binary"
-	@echo "  build-darwin         - Build all macOS binaries (for testing)"
-	@echo "  build-darwin-amd64   - Build macOS AMD64 binary"
-	@echo "  build-darwin-arm64   - Build macOS ARM64 binary (Apple Silicon)"
-	@echo "  build-all            - Build for all platforms"
-	@echo "  test                 - Run all tests"
-	@echo "  test-race            - Run tests with race detection"
-	@echo "  test-coverage        - Run tests with coverage report"
-	@echo "  install              - Install binary locally"
-	@echo "  help                 - Show this help message"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "BUILD TARGETS"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  all                  Clean and build Windows binaries (default)"
+	@echo "  clean                Remove build artifacts from bin/ directory"
+	@echo ""
+	@echo "  Windows Builds:"
+	@echo "    build-windows        Build all Windows binaries (AMD64 + ARM64)"
+	@echo "    build-windows-amd64  Build Windows AMD64 binary only"
+	@echo "    build-windows-arm64  Build Windows ARM64 binary only"
+	@echo ""
+	@echo "  Linux Builds (for testing):"
+	@echo "    build-linux          Build all Linux binaries (AMD64 + ARM64)"
+	@echo "    build-linux-amd64    Build Linux AMD64 binary only"
+	@echo "    build-linux-arm64    Build Linux ARM64 binary only"
+	@echo ""
+	@echo "  macOS Builds (for testing):"
+	@echo "    build-darwin         Build all macOS binaries (AMD64 + ARM64)"
+	@echo "    build-darwin-amd64   Build macOS AMD64 binary only"
+	@echo "    build-darwin-arm64   Build macOS ARM64 binary (Apple Silicon)"
+	@echo ""
+	@echo "  Cross-Platform:"
+	@echo "    build-all            Build for all platforms (Windows, Linux, macOS)"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "TEST TARGETS"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  Development Workflows (Fast):"
+	@echo "    test                 Run fast tests in quick mode (default, ~30s)"
+	@echo "                         → Use during active development for rapid feedback"
+	@echo "                         → 10-20 iterations per property test"
+	@echo "                         → Small data sets (100 files, depth 3)"
+	@echo ""
+	@echo "    test-quick           Explicitly run tests in quick mode (same as 'test')"
+	@echo "                         → Useful when TEST_INTENSITY is set elsewhere"
+	@echo ""
+	@echo "  CI/CD Workflows (Comprehensive):"
+	@echo "    test-thorough        Run comprehensive tests in thorough mode (~5min)"
+	@echo "                         → Use in CI/CD pipelines before merging"
+	@echo "                         → 100-200 iterations per property test"
+	@echo "                         → Larger data sets (1000 files, depth 5)"
+	@echo ""
+	@echo "    test-coverage        Generate HTML coverage report (coverage.html)"
+	@echo "                         → Creates coverage.out and coverage.html files"
+	@echo "                         → Use to validate test coverage before releases"
+	@echo ""
+	@echo "  Performance Testing (Long-Running):"
+	@echo "    test-stress          Run stress tests only (10+ minutes)"
+	@echo "                         → Tests with large data sets (10,000+ files)"
+	@echo "                         → Deep directory structures (depth 10+)"
+	@echo "                         → Use before major releases"
+	@echo ""
+	@echo "    test-all             Run all tests: thorough + stress (10+ minutes)"
+	@echo "                         → Most comprehensive validation"
+	@echo "                         → Use before creating releases"
+	@echo ""
+	@echo "  Debugging & Analysis:"
+	@echo "    test-race            Run tests with race detector"
+	@echo "                         → Detects data races in concurrent code"
+	@echo "                         → Use when debugging concurrency issues"
+	@echo ""
+	@echo "    benchmark            Run Go benchmarks (internal/backend)"
+	@echo "                         → Measures performance of deletion methods"
+	@echo "                         → Use for performance regression testing"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "BUILD VERIFICATION TARGETS"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  verify-windows       Verify Windows-specific code compiles (AMD64 + ARM64)"
+	@echo "                       → Ensures Windows build tags are correct"
+	@echo "                       → Use before committing Windows-specific changes"
+	@echo ""
+	@echo "  verify-all           Verify code compiles on all platforms"
+	@echo "                       → Tests Windows, Linux, macOS (AMD64 + ARM64)"
+	@echo "                       → Use before creating releases"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "OTHER TARGETS"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  install              Install binary locally (go install)"
+	@echo "  help                 Show this help message"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "TEST MODES EXPLAINED"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  Quick Mode (default):"
+	@echo "    • Execution time: ~30 seconds"
+	@echo "    • Iterations: 10-20 per property test"
+	@echo "    • Data sets: 100 files, depth 3"
+	@echo "    • Use case: Local development, rapid iteration"
+	@echo ""
+	@echo "  Thorough Mode:"
+	@echo "    • Execution time: ~5 minutes"
+	@echo "    • Iterations: 100-200 per property test"
+	@echo "    • Data sets: 1,000 files, depth 5"
+	@echo "    • Use case: CI/CD pipelines, pre-release validation"
+	@echo ""
+	@echo "  Stress Tests:"
+	@echo "    • Execution time: 10+ minutes"
+	@echo "    • Iterations: 100-200 per property test"
+	@echo "    • Data sets: 10,000+ files, depth 10+"
+	@echo "    • Use case: Performance testing, release validation"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "ENVIRONMENT VARIABLES"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  TEST_INTENSITY=quick|thorough"
+	@echo "    Control test thoroughness (default: quick)"
+	@echo "    Examples:"
+	@echo "      TEST_INTENSITY=quick go test ./..."
+	@echo "      TEST_INTENSITY=thorough go test ./..."
+	@echo ""
+	@echo "  TEST_QUICK=1"
+	@echo "    Force quick mode regardless of TEST_INTENSITY"
+	@echo "    Example:"
+	@echo "      TEST_QUICK=1 go test ./..."
+	@echo ""
+	@echo "  VERBOSE_TESTS=1"
+	@echo "    Enable verbose test output (use sparingly)"
+	@echo "    Example:"
+	@echo "      VERBOSE_TESTS=1 go test ./internal/logger"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "RECOMMENDED WORKFLOWS"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  During development:"
+	@echo "    make test                    # Quick validation (~30s)"
+	@echo ""
+	@echo "  Before committing:"
+	@echo "    make test                    # Quick validation"
+	@echo ""
+	@echo "  Before creating PR:"
+	@echo "    make test-thorough           # Comprehensive validation (~5min)"
+	@echo "    make test-coverage           # Check coverage"
+	@echo ""
+	@echo "  Before release:"
+	@echo "    make test-all                # All tests including stress (10+ min)"
+	@echo ""
+	@echo "  Debugging specific test:"
+	@echo "    VERBOSE_TESTS=1 go test ./internal/engine -run TestName"
+	@echo "    make test-race               # Check for race conditions"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "For more details, see README.md or run: go test ./... -h"
+	@echo ""

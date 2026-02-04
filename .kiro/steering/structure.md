@@ -15,6 +15,7 @@ fast-file-deletion/
 │   ├── safety/                 # Path validation and user confirmation
 │   └── scanner/                # Directory traversal and age filtering
 ├── bin/                        # Build output (gitignored)
+├── .internal/                  # Temporary notes and working documents (gitignored)
 ├── .kiro/                      # Kiro AI assistant configuration
 │   ├── specs/                  # Feature specifications
 │   └── steering/               # AI guidance documents
@@ -91,3 +92,13 @@ fast-file-deletion/
 - Property-based tests use Rapid framework
 - Integration tests in `internal/integration_test.go`
 - Test data preserved in `testdata/rapid/` for reproducibility
+
+## Temporary Documentation
+
+**CRITICAL**: All temporary markdown files (summaries, notes, implementation details, performance reports) MUST be placed in `.internal/` directory:
+
+- `.internal/` is gitignored and never committed
+- Use for: task summaries, performance notes, implementation notes, test results, debugging logs
+- Examples: `.internal/task-summary.md`, `.internal/benchmark-results.md`, `.internal/implementation-notes.md`
+- Never create temporary markdown files in root, package directories, or `.kiro/specs/`
+- Only permanent documentation belongs in root (README.md, CHANGELOG.md) or package docs (internal/*/README.md)

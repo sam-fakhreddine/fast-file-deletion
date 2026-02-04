@@ -1,0 +1,11 @@
+# 2026/01/16 10:08:35.671315 [TestInvalidConfigurationHandling] [rapid] draw invalidScenario: 3
+# 2026/01/16 10:08:35.671317 [TestInvalidConfigurationHandling] [rapid] draw invalidKeepDays: -3
+# 2026/01/16 10:08:35.671319 [TestInvalidConfigurationHandling] Scenario 'invalid keep-days': Expected error for invalid configuration, but got none. Config: &{TargetDir:/var/folders/f3/z3g2rrn560q_6fl14zjmw_z80000gn/T/TestInvalidConfigurationHandling3776732197/006 Force:false DryRun:false Verbose:false LogFile: KeepDays:<nil> Workers:0 BufferSize:0 DeletionMethod:auto Benchmark:false}
+# 
+v0.4.8#917787855991323409
+0x167ec4441a7abe
+0x106dd3a9af96d8
+0x3
+0x1b96c66290e98c
+0x282e83554dac7
+0x1

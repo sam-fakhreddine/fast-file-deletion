@@ -1,0 +1,13 @@
+# 2026/01/16 10:47:59.048498 [TestPropertyPeriodicRateReportingShortOperations] [rapid] draw fileCount: 50
+# 2026/01/16 10:47:59.048499 [TestPropertyPeriodicRateReportingShortOperations] [rapid] draw workers: 2
+# 2026/01/16 10:47:59.055784 [TestPropertyPeriodicRateReportingShortOperations] Short deletion completed in 0.00s with 2 workers
+# 2026/01/16 10:47:59.055786 [TestPropertyPeriodicRateReportingShortOperations] Processed 50 files at 15055.4 files/sec average
+# 2026/01/16 10:47:59.055787 [TestPropertyPeriodicRateReportingShortOperations] Collected 0 rate samples
+# 
+v0.4.8#9720561064705915413
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

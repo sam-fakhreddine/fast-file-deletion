@@ -5,6 +5,8 @@ package backend
 // newPlatformBackend returns the Windows-optimized backend.
 // This function is called by NewBackend() and is compiled only on Windows platforms
 // due to the build tag. On non-Windows platforms, factory_generic.go provides the implementation instead.
+//
+// Returns WindowsAdvancedBackend which supports multiple deletion methods and automatic fallback.
 func newPlatformBackend() Backend {
-	return NewWindowsBackend()
+	return NewWindowsAdvancedBackend()
 }

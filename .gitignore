@@ -20,6 +20,7 @@ vendor/
 # Build output
 /bin/
 /dist/
+/fast-file-deletion
 
 # GoReleaser output
 dist/
@@ -48,3 +49,6 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Temporary documentation and notes
+.internal/

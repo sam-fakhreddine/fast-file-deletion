@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yourusername/fast-file-deletion/internal/testutil"
 	"pgregory.net/rapid"
 )
 
@@ -146,6 +147,9 @@ func TestScanner_KeepDaysZero(t *testing.T) {
 // Feature: fast-file-deletion, Property 6: Modification Timestamp Usage
 // Validates: Requirements 7.2
 func TestModificationTimestampUsageProperty(t *testing.T) {
+	// Configure rapid with testutil settings
+	testutil.GetRapidCheckConfig(t)
+	
 	rapid.Check(t, func(rt *rapid.T) {
 		// Create a temporary directory for this test iteration
 		tmpDir := t.TempDir()
@@ -154,7 +158,7 @@ func TestModificationTimestampUsageProperty(t *testing.T) {
 		keepDays := rapid.IntRange(1, 30).Draw(rt, "keepDays")
 		keepDuration := time.Duration(keepDays) * 24 * time.Hour
 
-		// Generate a random number of files (1 to 10 for reasonable test speed)
+		// Generate a random number of files (1 to 10 max for quick mode)
 		numFiles := rapid.IntRange(1, 10).Draw(rt, "numFiles")
 
 		// Track files and their modification times
@@ -169,8 +173,8 @@ func TestModificationTimestampUsageProperty(t *testing.T) {
 			hoursOffset := rapid.IntRange(0, 23).Draw(rt, "hoursOffset")
 			modTime := now.Add(-time.Duration(daysOld)*24*time.Hour - time.Duration(hoursOffset)*time.Hour)
 
-			// Create the file
-			if err := os.WriteFile(fileName, []byte("test content"), 0644); err != nil {
+			// Create the file with minimal content
+			if err := os.WriteFile(fileName, []byte("test"), 0644); err != nil {
 				rt.Fatalf("Failed to create file: %v", err)
 			}
 
@@ -254,6 +258,9 @@ func TestModificationTimestampUsageProperty(t *testing.T) {
 // Feature: fast-file-deletion, Property 7: Retention Count Accuracy
 // Validates: Requirements 7.6
 func TestRetentionCountAccuracyProperty(t *testing.T) {
+	// Configure rapid with testutil settings
+	testutil.GetRapidCheckConfig(t)
+	
 	rapid.Check(t, func(rt *rapid.T) {
 		// Create a temporary directory for this test iteration
 		tmpDir := t.TempDir()
@@ -262,7 +269,7 @@ func TestRetentionCountAccuracyProperty(t *testing.T) {
 		keepDays := rapid.IntRange(1, 30).Draw(rt, "keepDays")
 		keepDuration := time.Duration(keepDays) * 24 * time.Hour
 
-		// Generate a random number of files (1 to 20 for reasonable test speed)
+		// Generate a random number of files (1 to 20 max for quick mode)
 		numFiles := rapid.IntRange(1, 20).Draw(rt, "numFiles")
 
 		// Track files that should be retained based on age
@@ -279,8 +286,8 @@ func TestRetentionCountAccuracyProperty(t *testing.T) {
 			fileAge := time.Duration(daysOld)*24*time.Hour + time.Duration(hoursOffset)*time.Hour
 			modTime := now.Add(-fileAge)
 
-			// Create the file
-			if err := os.WriteFile(fileName, []byte("test content"), 0644); err != nil {
+			// Create the file with minimal content
+			if err := os.WriteFile(fileName, []byte("test"), 0644); err != nil {
 				rt.Fatalf("Failed to create file: %v", err)
 			}
 
@@ -608,6 +615,9 @@ func TestScanner_Symlinks(t *testing.T) {
 // Feature: fast-file-deletion, Property 5: Age-Based Filtering
 // Validates: Requirements 7.1, 7.3
 func TestAgeBasedFilteringProperty(t *testing.T) {
+	// Configure rapid with testutil settings
+	testutil.GetRapidCheckConfig(t)
+	
 	rapid.Check(t, func(rt *rapid.T) {
 		// Create a temporary directory for this test iteration
 		tmpDir := t.TempDir()
@@ -616,7 +626,7 @@ func TestAgeBasedFilteringProperty(t *testing.T) {
 		keepDays := rapid.IntRange(1, 30).Draw(rt, "keepDays")
 		keepDuration := time.Duration(keepDays) * 24 * time.Hour
 
-		// Generate a random number of files (1 to 20 for reasonable test speed)
+		// Generate a random number of files (1 to 20 max for quick mode)
 		numFiles := rapid.IntRange(1, 20).Draw(rt, "numFiles")
 
 		// Track which files should be deleted vs retained
@@ -636,8 +646,8 @@ func TestAgeBasedFilteringProperty(t *testing.T) {
 			fileAge := time.Duration(daysOld)*24*time.Hour + time.Duration(hoursOffset)*time.Hour
 			modTime := now.Add(-fileAge)
 
-			// Create the file
-			if err := os.WriteFile(fileName, []byte("test content"), 0644); err != nil {
+			// Create the file with minimal content
+			if err := os.WriteFile(fileName, []byte("test"), 0644); err != nil {
 				rt.Fatalf("Failed to create file: %v", err)
 			}
 
@@ -730,4 +740,108 @@ func TestAgeBasedFilteringProperty(t *testing.T) {
 			rt.Fatalf("Expected %d files marked for deletion, got %d", len(expectedDeleted), actualDeletedFiles)
 		}
 	})
+}
+
+
+// TestParallelScanner_Constructor tests the ParallelScanner constructor
+// Requirements: 3.1, 3.2
+func TestParallelScanner_Constructor(t *testing.T) {
+	// Test with explicit worker count
+	keepDays := 5
+	scanner := NewParallelScanner("/test/path", &keepDays, 8)
+	
+	if scanner == nil {
+		t.Fatal("NewParallelScanner returned nil")
+	}
+	
+	if scanner.rootPath != "/test/path" {
+		t.Errorf("Expected rootPath = /test/path, got %s", scanner.rootPath)
+	}
+	
+	if scanner.keepDays == nil || *scanner.keepDays != 5 {
+		t.Errorf("Expected keepDays = 5, got %v", scanner.keepDays)
+	}
+	
+	if scanner.workers != 8 {
+		t.Errorf("Expected workers = 8, got %d", scanner.workers)
+	}
+}
+
+// TestParallelScanner_AutoWorkerCount tests auto-detection of worker count
+// Requirements: 3.1, 3.2
+func TestParallelScanner_AutoWorkerCount(t *testing.T) {
+	// Test with auto worker count (0 or negative)
+	scanner := NewParallelScanner("/test/path", nil, 0)
+	
+	if scanner == nil {
+		t.Fatal("NewParallelScanner returned nil")
+	}
+	
+	// Should default to 4 workers
+	if scanner.workers != 4 {
+		t.Errorf("Expected workers = 4 (default), got %d", scanner.workers)
+	}
+	
+	// Test with negative worker count
+	scanner2 := NewParallelScanner("/test/path", nil, -1)
+	if scanner2.workers != 4 {
+		t.Errorf("Expected workers = 4 (default for negative), got %d", scanner2.workers)
+	}
+}
+
+// TestParallelScanner_BasicScan tests that ParallelScanner can perform basic scanning
+// Requirements: 3.1, 3.2
+func TestParallelScanner_BasicScan(t *testing.T) {
+	// Create a temporary directory structure for testing
+	tmpDir := t.TempDir()
+
+	// Create some test files
+	testFiles := []string{
+		"file1.txt",
+		"file2.txt",
+		"subdir/file3.txt",
+	}
+
+	for _, file := range testFiles {
+		fullPath := filepath.Join(tmpDir, file)
+		dir := filepath.Dir(fullPath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("Failed to create directory: %v", err)
+		}
+		if err := os.WriteFile(fullPath, []byte("test content"), 0644); err != nil {
+			t.Fatalf("Failed to create file: %v", err)
+		}
+	}
+
+	// Create parallel scanner
+	scanner := NewParallelScanner(tmpDir, nil, 4)
+
+	// Scan the directory
+	result, err := scanner.Scan()
+	if err != nil {
+		t.Fatalf("Scan failed: %v", err)
+	}
+
+	// Verify results
+	if result.TotalScanned == 0 {
+		t.Error("Expected TotalScanned > 0")
+	}
+
+	if result.TotalToDelete == 0 {
+		t.Error("Expected TotalToDelete > 0")
+	}
+
+	if len(result.Files) == 0 {
+		t.Error("Expected Files list to be non-empty")
+	}
+
+	// Verify scan duration was recorded
+	if result.ScanDuration == 0 {
+		t.Error("Expected ScanDuration > 0")
+	}
+
+	// Verify UTF-16 slice is initialized (even if empty on non-Windows)
+	if result.FilesUTF16 == nil {
+		t.Error("Expected FilesUTF16 to be initialized")
+	}
 }
