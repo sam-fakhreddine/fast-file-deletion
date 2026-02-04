@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -401,27 +402,23 @@ func toExtendedLengthPath(path string) string {
 
 // sortPathsByDepth sorts PathInfo entries by depth (deepest first) for bottom-up ordering.
 // This ensures that children are deleted before their parent directories.
+// Uses O(n log n) sorting algorithm for optimal performance with large file counts.
 func sortPathsByDepth(pathInfos []PathInfo) []PathInfo {
 	// Create a copy to avoid modifying the original
 	sorted := make([]PathInfo, len(pathInfos))
 	copy(sorted, pathInfos)
 
-	// Sort by depth (descending) and then by path (for deterministic ordering)
-	// We use a simple bubble sort for now; could optimize with sort.Slice if needed
-	for i := 0; i < len(sorted); i++ {
-		for j := i + 1; j < len(sorted); j++ {
-			// Sort by depth (descending)
-			if sorted[i].Depth < sorted[j].Depth {
-				sorted[i], sorted[j] = sorted[j], sorted[i]
-			} else if sorted[i].Depth == sorted[j].Depth {
-				// For same depth, sort by path length (longer paths first)
-				// This ensures deeper nesting within the same level
-				if len(sorted[i].UTF8Path) < len(sorted[j].UTF8Path) {
-					sorted[i], sorted[j] = sorted[j], sorted[i]
-				}
-			}
+	// Sort by depth (descending) and then by path length (descending) for deterministic ordering
+	// sort.Slice uses introsort (quicksort + heapsort) which is O(n log n)
+	sort.Slice(sorted, func(i, j int) bool {
+		// Primary sort: depth descending (deepest first)
+		if sorted[i].Depth != sorted[j].Depth {
+			return sorted[i].Depth > sorted[j].Depth
 		}
-	}
+		// Secondary sort: path length descending (longer paths first)
+		// This ensures deeper nesting within the same level
+		return len(sorted[i].UTF8Path) > len(sorted[j].UTF8Path)
+	})
 
 	return sorted
 }
