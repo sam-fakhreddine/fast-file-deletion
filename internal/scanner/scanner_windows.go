@@ -237,7 +237,7 @@ func (ps *ParallelScanner) processDirectoryWithTracking(
 	defer windows.FindClose(handle)
 
 	// Calculate depth for ordering (count path separators)
-	depth := len(filepath.SplitList(dirPath))
+	depth := countPathSeparators(dirPath)
 
 	// Process all entries in this directory
 	for {
@@ -421,6 +421,19 @@ func sortPathsByDepth(pathInfos []PathInfo) []PathInfo {
 	})
 
 	return sorted
+}
+
+// countPathSeparators counts the number of path separators in a path
+// to determine its depth in the directory hierarchy.
+// This is used for bottom-up ordering to ensure children are deleted before parents.
+func countPathSeparators(path string) int {
+	count := 0
+	for _, char := range path {
+		if char == '/' || char == '\\' {
+			count++
+		}
+	}
+	return count
 }
 
 // init function to configure Windows-specific settings for ParallelScanner
