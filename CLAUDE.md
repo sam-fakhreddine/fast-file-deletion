@@ -80,6 +80,15 @@ CLI parses args → Safety validates path → Scanner traverses directory → Us
 
 `FileDispositionInfoEx` → `FileDispositionInfo` → `FILE_FLAG_DELETE_ON_CLOSE` → `NtDeleteFile` → `DeleteFile`
 
+### Memory management (v0.16+)
+
+- **Dynamic allocation**: 25% of system RAM (up to 6GB max, 512MB min)
+- **Platform detection**: Windows (GlobalMemoryStatusEx), macOS (sysctl hw.memsize), Linux (/proc/meminfo)
+- **Environment override**: Respects `GOMEMLIMIT` if set by user
+- **Initialization**: `initializeMemoryLimit()` called at startup in main.go
+- **Threshold**: Memory pressure warnings at 95% (was 80%)
+- **Cooldown**: 60-second cooldown between bottleneck warnings
+
 ## Code Conventions
 
 - **File naming**: `*_windows.go` / `*_generic.go` for platform code, `*_test.go` for tests, `*_stress_test.go` for stress tests (behind `stress` build tag)
