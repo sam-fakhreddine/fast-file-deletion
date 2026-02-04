@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 
@@ -18,11 +19,49 @@ import (
 )
 
 // Windows API constants for FindFirstFileEx optimization
-// These may not be fully defined in older versions of golang.org/x/sys/windows
+// These are not yet in golang.org/x/sys/windows so we define them here
 const (
 	// FIND_FIRST_EX_LARGE_FETCH uses a larger buffer (64KB vs 4KB) for directory enumeration
 	FIND_FIRST_EX_LARGE_FETCH = 0x00000002
+
+	// FindExInfoBasic skips 8.3 short name generation for better performance
+	FindExInfoBasic = 1
+
+	// FindExSearchNameMatch performs standard name-based search
+	FindExSearchNameMatch = 0
 )
+
+// Windows API syscall definitions for FindFirstFileEx
+var (
+	kernel32           = windows.NewLazySystemDLL("kernel32.dll")
+	procFindFirstFileEx = kernel32.NewProc("FindFirstFileExW")
+)
+
+// findFirstFileEx calls the Windows FindFirstFileExW API
+func findFirstFileEx(
+	fileName *uint16,
+	infoLevelId uint32,
+	findFileData *windows.Win32finddata,
+	searchOp uint32,
+	searchFilter uintptr,
+	additionalFlags uint32,
+) (windows.Handle, error) {
+	r0, _, e1 := syscall.Syscall6(
+		procFindFirstFileEx.Addr(),
+		6,
+		uintptr(unsafe.Pointer(fileName)),
+		uintptr(infoLevelId),
+		uintptr(unsafe.Pointer(findFileData)),
+		uintptr(searchOp),
+		searchFilter,
+		uintptr(additionalFlags),
+	)
+	handle := windows.Handle(r0)
+	if handle == windows.InvalidHandle {
+		return handle, e1
+	}
+	return handle, nil
+}
 
 // PathInfo stores both UTF-8 and UTF-16 representations of a path
 // along with metadata needed for deletion ordering and progress reporting.
@@ -234,12 +273,12 @@ func (ps *ParallelScanner) processDirectoryWithTracking(
 	// - FindExInfoBasic: Skip 8.3 short name generation (saves CPU)
 	// - FIND_FIRST_EX_LARGE_FETCH: Use 64KB buffer instead of 4KB (fewer syscalls)
 	var findData windows.Win32finddata
-	handle, err := windows.FindFirstFileEx(
+	handle, err := findFirstFileEx(
 		searchPathUTF16,
-		windows.FindExInfoBasic,
+		FindExInfoBasic,
 		&findData,
-		windows.FindExSearchNameMatch,
-		nil,
+		FindExSearchNameMatch,
+		0,
 		FIND_FIRST_EX_LARGE_FETCH,
 	)
 	if err != nil {
