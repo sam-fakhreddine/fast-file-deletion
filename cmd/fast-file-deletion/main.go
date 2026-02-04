@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/yourusername/fast-file-deletion/internal/backend"
@@ -43,6 +44,10 @@ type Config struct {
 }
 
 func main() {
+	// Set Go memory limit to 25% of system RAM for better performance
+	// This reduces GC pressure and improves deletion throughput
+	initializeMemoryLimit()
+
 	// Parse command-line arguments
 	config, err := parseArguments()
 	if err != nil {
@@ -60,6 +65,24 @@ func main() {
 	// Run the main deletion workflow
 	exitCode := run(config)
 	os.Exit(exitCode)
+}
+
+// initializeMemoryLimit sets Go's soft memory limit to 25% of system RAM.
+// This gives Go more headroom, reduces GC pressure, and improves performance.
+// On a 32GB system, this sets the limit to 8GB instead of Go's default ~1GB.
+func initializeMemoryLimit() {
+	totalRAM := getTotalSystemMemory()
+	if totalRAM > 0 {
+		// Set limit to 25% of system RAM
+		memLimit := int64(float64(totalRAM) * 0.25)
+		debug.SetMemoryLimit(memLimit)
+
+		// Log the new limit (converted to human-readable format)
+		memLimitMB := memLimit / (1024 * 1024)
+		totalRAMMB := totalRAM / (1024 * 1024)
+		fmt.Fprintf(os.Stderr, "Go memory limit set to %d MB (25%% of %d MB system RAM)\n",
+			memLimitMB, totalRAMMB)
+	}
 }
 
 // parseArguments parses and validates command-line arguments.
