@@ -421,36 +421,6 @@ func NewWindowsAdvancedBackend() *WindowsAdvancedBackend {
 	}
 }
 
-// LogAPIAvailability logs information about which deletion APIs are available
-// on the current Windows version. This should be called during initialization
-// to inform users about the capabilities of their system.
-//
-// The function logs:
-//   - Windows version information
-//   - FileDispositionInfoEx availability (requires Windows 10 RS1+)
-//   - NtDeleteFile availability
-//   - Warnings when advanced APIs are unavailable
-//
-// Validates Requirements: 7.1, 7.2
-func LogAPIAvailability() {
-	major, minor, build := getWindowsVersion()
-	
-	// Import logger package is needed at the top of the file
-	// For now, we'll use a simple approach that can be called from main
-	
-	// Check FileDispositionInfoEx availability
-	hasFileInfoEx := supportsFileDispositionInfoEx()
-	hasNtDelete := supportsNtDeleteFile()
-	
-	// Store this information for logging by the caller
-	// We'll return a struct with the availability info
-	_ = major
-	_ = minor
-	_ = build
-	_ = hasFileInfoEx
-	_ = hasNtDelete
-}
-
 // GetAPIAvailability returns information about which deletion APIs are available
 // on the current Windows version. This can be used by the caller to log appropriate
 // warnings and information messages.

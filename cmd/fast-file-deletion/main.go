@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -18,6 +19,12 @@ import (
 	"github.com/yourusername/fast-file-deletion/internal/progress"
 	"github.com/yourusername/fast-file-deletion/internal/safety"
 	"github.com/yourusername/fast-file-deletion/internal/scanner"
+)
+
+// CLI validation limits.
+const (
+	MaxWorkers    = 1000
+	MaxBufferSize = 100000
 )
 
 // Config holds the parsed command-line configuration.
@@ -159,13 +166,6 @@ func validateConfig(config *Config) error {
 		return fmt.Errorf("invalid --deletion-method value: must be one of: auto, fileinfo, deleteonclose, ntapi, deleteapi (got %s)", config.DeletionMethod)
 	}
 
-	// Validate method availability on Windows
-	if runtime.GOOS == "windows" && config.DeletionMethod != "auto" {
-		if err := validateDeletionMethodAvailability(config.DeletionMethod); err != nil {
-			return err
-		}
-	}
-
 	// Validate flag combinations
 	// Benchmark mode validations
 	if config.Benchmark {
@@ -190,73 +190,12 @@ func validateConfig(config *Config) error {
 	// But we check for obviously invalid paths
 	// Empty string is valid at this point (will be caught by parseArguments if required)
 
-	// Validate log file path if specified
-	if config.LogFile != "" {
-		// Check if log file path is valid (basic check)
-		// Empty string check is redundant here since we already checked != ""
+	if config.Workers > MaxWorkers {
+		return fmt.Errorf("invalid --workers value: must be <= %d (got %d)", MaxWorkers, config.Workers)
 	}
 
-	// Validate worker count is reasonable (not too high)
-	if config.Workers > 1000 {
-		return fmt.Errorf("invalid --workers value: must be <= 1000 (got %d)", config.Workers)
-	}
-
-	// Validate buffer size is reasonable (not too high)
-	if config.BufferSize > 100000 {
-		return fmt.Errorf("invalid --buffer-size value: must be <= 100000 (got %d)", config.BufferSize)
-	}
-
-	return nil
-
-
-}
-
-// validateDeletionMethodAvailability checks if the specified deletion method
-// is available on the current Windows version. Returns an error if the method
-// is not supported.
-func validateDeletionMethodAvailability(method string) error {
-	// Get the deletion method enum
-	var deletionMethod backend.DeletionMethod
-	switch method {
-	case "fileinfo":
-		deletionMethod = backend.MethodFileInfo
-	case "deleteonclose":
-		deletionMethod = backend.MethodDeleteOnClose
-	case "ntapi":
-		deletionMethod = backend.MethodNtAPI
-	case "deleteapi":
-		deletionMethod = backend.MethodDeleteAPI
-	default:
-		// "auto" is always available
-		return nil
-	}
-
-	// Check availability using backend functions
-	// We need to create a temporary backend to check availability
-	tempBackend := backend.NewBackend()
-	
-	// Check if the backend supports advanced methods
-	if advBackend, ok := tempBackend.(backend.AdvancedBackend); ok {
-		// Try to set the method - if it's not available, we'll get an error
-		// For now, we'll do a simple check based on the method type
-		switch deletionMethod {
-		case backend.MethodFileInfo:
-			// FileInfo requires Windows 10 or later
-			// The backend will handle fallback to FileDispositionInfo on older versions
-			// So this is always "available" but may use fallback internally
-			return nil
-		case backend.MethodDeleteOnClose:
-			// DELETE_ON_CLOSE is available on all Windows versions
-			return nil
-		case backend.MethodNtAPI:
-			// NtDeleteFile is available on all modern Windows versions
-			// The backend checks this at runtime
-			return nil
-		case backend.MethodDeleteAPI:
-			// DeleteFile is always available
-			return nil
-		}
-		_ = advBackend // Use the variable to avoid unused warning
+	if config.BufferSize > MaxBufferSize {
+		return fmt.Errorf("invalid --buffer-size value: must be <= %d (got %d)", MaxBufferSize, config.BufferSize)
 	}
 
 	return nil
@@ -299,30 +238,10 @@ func printUsage() {
 // run executes the main deletion workflow with the given configuration.
 // Returns an exit code: 0 for success, 1 for partial failure, 2 for complete failure.
 func run(config *Config) int {
-	// Setup logging first
-	err := logger.SetupLogging(config.Verbose, config.LogFile)
-	if err != nil {
+	if err := setupLogging(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to setup logging: %v\n", err)
-		// Continue anyway with default logging
 	}
 	defer logger.Close()
-
-	logger.Info("Fast File Deletion Tool v0.1.0")
-	logger.Info("Target directory: %s", config.TargetDir)
-
-	// Display platform-specific warning for non-Windows systems
-	if runtime.GOOS != "windows" {
-		fmt.Println()
-		fmt.Println("⚠️  Note: This tool is optimized for Windows systems.")
-		fmt.Println("   Performance optimizations are Windows-specific.")
-		fmt.Println("   On other platforms, standard file operations will be used.")
-		fmt.Println()
-		logger.Warning("Running on non-Windows platform (%s): Windows-specific optimizations disabled", runtime.GOOS)
-	} else {
-		// On Windows, log API availability information
-		// Validates Requirements: 7.1, 7.2
-		logWindowsAPIAvailability()
-	}
 
 	// If benchmark mode is enabled, run benchmarks instead of normal deletion
 	if config.Benchmark {
@@ -334,17 +253,77 @@ func run(config *Config) int {
 		return runBenchmarkMode(config)
 	}
 
-	// Step 1: Safety validation
+	// Validate path, scan directory, and get user confirmation
+	scanResult, exitCode := scanAndConfirm(config)
+	if scanResult == nil {
+		return exitCode
+	}
+
+	// Initialize engine and backend
+	backendInstance, eng, reporter := createEngine(config, scanResult)
+
+	// Set up interrupt handler for graceful cancellation
+	ctx, cancel := engine.SetupInterruptHandler()
+	defer cancel()
+
+	// Set up system resource monitoring if enabled
+	mon := startMonitor(config, ctx, eng)
+
+	// Execute deletion
+	fmt.Println()
+	if config.DryRun {
+		fmt.Println("Starting dry run (no files will be deleted)...")
+	} else {
+		fmt.Println("Starting deletion...")
+	}
+
+	result, err := eng.DeleteWithUTF16(ctx, scanResult.Files, scanResult.FilesUTF16, scanResult.IsDirectory, config.DryRun)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "\n❌ Error: Deletion failed: %v\n\n", err)
+		logger.Error("Deletion failed: %v", err)
+		return 2
+	}
+
+	// Display results
+	return displayResults(config, result, backendInstance, scanResult, mon, reporter)
+}
+
+// setupLogging initializes logging and displays platform information.
+func setupLogging(config *Config) error {
+	err := logger.SetupLogging(config.Verbose, config.LogFile)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Fast File Deletion Tool v0.1.0")
+	logger.Info("Target directory: %s", config.TargetDir)
+
+	if runtime.GOOS != "windows" {
+		fmt.Println()
+		fmt.Println("⚠️  Note: This tool is optimized for Windows systems.")
+		fmt.Println("   Performance optimizations are Windows-specific.")
+		fmt.Println("   On other platforms, standard file operations will be used.")
+		fmt.Println()
+		logger.Warning("Running on non-Windows platform (%s): Windows-specific optimizations disabled", runtime.GOOS)
+	} else {
+		logWindowsAPIAvailability()
+	}
+
+	return nil
+}
+
+// scanAndConfirm validates the target path, scans the directory, and obtains user confirmation.
+// Returns the scan result and exit code. A nil scan result means the caller should return the exit code.
+func scanAndConfirm(config *Config) (*scanner.ScanResult, int) {
 	logger.Info("Validating target path safety...")
 	isSafe, reason := safety.IsSafePath(config.TargetDir)
 	if !isSafe {
 		fmt.Fprintf(os.Stderr, "\n❌ Error: Cannot delete this path\n")
 		fmt.Fprintf(os.Stderr, "   Reason: %s\n\n", reason)
 		logger.Error("Path validation failed: %s", reason)
-		return 2
+		return nil, 2
 	}
 
-	// Step 2: Scan directory
 	logger.Info("Scanning directory...")
 	fmt.Println("\nScanning directory...")
 
@@ -353,7 +332,7 @@ func run(config *Config) int {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n❌ Error: Failed to scan directory: %v\n\n", err)
 		logger.Error("Directory scan failed: %v", err)
-		return 2
+		return nil, 2
 	}
 
 	fmt.Printf("Found %d files and directories", scanResult.TotalScanned)
@@ -365,29 +344,29 @@ func run(config *Config) int {
 	logger.Info("Scan complete: %d total, %d to delete, %d to retain",
 		scanResult.TotalScanned, scanResult.TotalToDelete, scanResult.TotalRetained)
 
-	// Check if there's anything to delete
 	if scanResult.TotalToDelete == 0 {
 		fmt.Println("\n✓ No files to delete.")
 		logger.Info("No files to delete, exiting")
-		return 0
+		return nil, 0
 	}
 
-	// Step 3: Get user confirmation
 	confirmed := safety.GetUserConfirmation(config.TargetDir, scanResult.TotalToDelete, config.DryRun, config.Force)
 	if !confirmed {
 		fmt.Println("\n❌ Deletion cancelled by user.")
 		logger.Info("Deletion cancelled by user")
-		return 0
+		return nil, 0
 	}
 
-	// Step 4: Initialize deletion engine
-	// Determine worker count (for logging)
+	return scanResult, 0
+}
+
+// createEngine initializes the backend, deletion engine, and progress reporter.
+func createEngine(config *Config, scanResult *scanner.ScanResult) (backend.Backend, *engine.Engine, *progress.Reporter) {
 	workerCount := config.Workers
 	if workerCount == 0 {
-		workerCount = runtime.NumCPU() * 4
+		workerCount = runtime.NumCPU() * engine.DefaultWorkerMultiplier
 	}
 
-	// Determine buffer size (for logging)
 	bufferSize := config.BufferSize
 	if bufferSize == 0 {
 		bufferSize = min(scanResult.TotalToDelete, 10000)
@@ -398,7 +377,6 @@ func run(config *Config) int {
 
 	backendInstance := backend.NewBackend()
 
-	// Configure deletion method if specified and backend supports it
 	if config.DeletionMethod != "auto" {
 		if advBackend, ok := backendInstance.(backend.AdvancedBackend); ok {
 			var method backend.DeletionMethod
@@ -414,79 +392,54 @@ func run(config *Config) int {
 			}
 			advBackend.SetDeletionMethod(method)
 			logger.Info("Using deletion method: %s", config.DeletionMethod)
-			logger.Debug("Deletion method configured: %s (explicit)", config.DeletionMethod)
 		} else if runtime.GOOS == "windows" {
 			logger.Warning("Advanced deletion methods not available on this backend")
 		}
 	} else {
 		logger.Info("Using automatic deletion method selection")
-		logger.Debug("Deletion method configured: auto (will use best available method with fallback)")
 	}
 
-	// Create progress reporter
 	reporter := progress.NewReporter(scanResult.TotalToDelete, scanResult.TotalSizeBytes)
 
-	// Create engine with progress callback
 	eng := engine.NewEngineWithBufferSize(backendInstance, config.Workers, config.BufferSize, func(deletedCount int) {
 		reporter.Update(deletedCount)
 	})
 
-	// Step 5: Set up interrupt handler for graceful cancellation
-	ctx, cancel := engine.SetupInterruptHandler()
-	defer cancel()
+	return backendInstance, eng, reporter
+}
 
-	// Step 5.5: Set up system resource monitoring if enabled
+// startMonitor sets up system resource monitoring if enabled. Returns the monitor
+// instance (nil if monitoring is disabled).
+func startMonitor(config *Config, ctx context.Context, eng *engine.Engine) interface{} {
+	if !config.Monitor {
+		return nil
+	}
+
+	getFilesDeleted := func() int { return eng.FilesDeleted() }
+	getDeletionRate := func() float64 { return eng.DeletionRate() }
+
 	var mon interface{}
-	if config.Monitor {
-		if runtime.GOOS == "windows" {
-			// Use Windows-specific monitor with real CPU and I/O metrics
-			winMon := monitor.NewWindowsMonitor()
-			mon = winMon
-			
-			// Start monitoring goroutine
-			go winMon.Start(ctx, 1*time.Second, 
-				func() int { return 0 }, // Will be updated by engine
-				func() float64 { return 0.0 }) // Will be updated by engine
-			
-			logger.Info("System resource monitoring enabled (Windows mode)")
-			fmt.Println("📊 System resource monitoring enabled - bottleneck analysis will be shown at completion")
-		} else {
-			// Use generic monitor for non-Windows platforms
-			genMon := monitor.NewMonitor()
-			mon = genMon
-			
-			go genMon.Start(ctx, 1*time.Second,
-				func() int { return 0 },
-				func() float64 { return 0.0 })
-			
-			logger.Info("System resource monitoring enabled (generic mode)")
-			fmt.Println("📊 System resource monitoring enabled - bottleneck analysis will be shown at completion")
-		}
-	}
-
-	// Step 6: Execute deletion
-	fmt.Println()
-	if config.DryRun {
-		fmt.Println("Starting dry run (no files will be deleted)...")
+	if runtime.GOOS == "windows" {
+		winMon := monitor.NewWindowsMonitor()
+		mon = winMon
+		go winMon.Start(ctx, 1*time.Second, getFilesDeleted, getDeletionRate)
+		logger.Info("System resource monitoring enabled (Windows mode)")
 	} else {
-		fmt.Println("Starting deletion...")
+		genMon := monitor.NewMonitor()
+		mon = genMon
+		go genMon.Start(ctx, 1*time.Second, getFilesDeleted, getDeletionRate)
+		logger.Info("System resource monitoring enabled (generic mode)")
 	}
+	fmt.Println("📊 System resource monitoring enabled - bottleneck analysis will be shown at completion")
+	return mon
+}
 
-	result, err := eng.DeleteWithUTF16(ctx, scanResult.Files, scanResult.FilesUTF16, scanResult.IsDirectory, config.DryRun)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n❌ Error: Deletion failed: %v\n\n", err)
-		logger.Error("Deletion failed: %v", err)
-		return 2
-	}
-
-	// Step 7: Display final statistics
+// displayResults shows final statistics, monitoring report, and returns the appropriate exit code.
+func displayResults(config *Config, result *engine.DeletionResult, backendInstance backend.Backend, scanResult *scanner.ScanResult, mon interface{}, reporter *progress.Reporter) int {
 	reporter.Finish(result.DeletedCount, result.FailedCount, scanResult.TotalRetained)
 
-	// Display detailed completion report
-	// Validates Requirements: 12.4
 	displayCompletionReport(result, backendInstance)
 
-	// Display monitoring report if enabled
 	if config.Monitor && mon != nil {
 		if winMon, ok := mon.(*monitor.WindowsMonitor); ok {
 			fmt.Println(winMon.GenerateReport())
@@ -495,7 +448,6 @@ func run(config *Config) int {
 		}
 	}
 
-	// Log any errors that occurred
 	if len(result.Errors) > 0 {
 		logger.Warning("Deletion completed with %d errors", len(result.Errors))
 		fmt.Printf("⚠️  Warning: %d files could not be deleted\n", result.FailedCount)
@@ -505,9 +457,8 @@ func run(config *Config) int {
 		fmt.Println()
 	}
 
-	// Determine exit code
 	if result.FailedCount > 0 {
-		return 1 // Partial failure
+		return 1
 	}
 
 	if config.DryRun {
@@ -516,7 +467,7 @@ func run(config *Config) int {
 		fmt.Println("✓ Deletion completed successfully.")
 	}
 
-	return 0 // Success
+	return 0
 }
 
 // runBenchmarkMode executes comparative benchmarks of all deletion methods.
@@ -585,7 +536,7 @@ func runBenchmarkMode(config *Config) int {
 	// Step 4: Configure benchmark
 	workers := config.Workers
 	if workers == 0 {
-		workers = runtime.NumCPU() * 4
+		workers = runtime.NumCPU() * engine.DefaultWorkerMultiplier
 	}
 
 	bufferSize := config.BufferSize
@@ -797,25 +748,6 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dm%ds", minutes, seconds)
 }
 
-// formatNumber formats a number with thousands separators (commas).
-// This makes large numbers more readable (e.g., 1,234,567 instead of 1234567).
-func formatNumber(n int) string {
-	if n < 1000 {
-		return fmt.Sprintf("%d", n)
-	}
-
-	// Format with commas
-	str := fmt.Sprintf("%d", n)
-	result := ""
-	for i, c := range str {
-		if i > 0 && (len(str)-i)%3 == 0 {
-			result += ","
-		}
-		result += string(c)
-	}
-	return result
-}
-
 // getMethodFlag returns the CLI flag value for a deletion method.
 func getMethodFlag(method backend.DeletionMethod) string {
 	switch method {
@@ -832,14 +764,6 @@ func getMethodFlag(method backend.DeletionMethod) string {
 	}
 }
 
-// min returns the minimum of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // displayCompletionReport displays a detailed completion report with performance metrics.
 // This function shows total files deleted, total time, average rate, peak rate, and
 // method statistics if using AdvancedBackend.
@@ -853,10 +777,10 @@ func displayCompletionReport(result *engine.DeletionResult, backendInstance back
 	fmt.Println()
 
 	// Display basic statistics
-	fmt.Printf("Total files processed:  %s\n", formatNumber(result.DeletedCount+result.FailedCount))
-	fmt.Printf("Successfully deleted:   %s files\n", formatNumber(result.DeletedCount))
+	fmt.Printf("Total files processed:  %s\n", progress.FormatNumber(result.DeletedCount+result.FailedCount))
+	fmt.Printf("Successfully deleted:   %s files\n", progress.FormatNumber(result.DeletedCount))
 	if result.FailedCount > 0 {
-		fmt.Printf("Failed to delete:       %s files\n", formatNumber(result.FailedCount))
+		fmt.Printf("Failed to delete:       %s files\n", progress.FormatNumber(result.FailedCount))
 	}
 	fmt.Println()
 
@@ -879,32 +803,32 @@ func displayCompletionReport(result *engine.DeletionResult, backendInstance back
 			if stats.FileInfoAttempts > 0 {
 				successRate := float64(stats.FileInfoSuccesses) / float64(stats.FileInfoAttempts) * 100
 				fmt.Printf("  FileInfo (SetFileInformationByHandle):\n")
-				fmt.Printf("    Attempts:     %s\n", formatNumber(stats.FileInfoAttempts))
-				fmt.Printf("    Successes:    %s (%.1f%%)\n", formatNumber(stats.FileInfoSuccesses), successRate)
+				fmt.Printf("    Attempts:     %s\n", progress.FormatNumber(stats.FileInfoAttempts))
+				fmt.Printf("    Successes:    %s (%.1f%%)\n", progress.FormatNumber(stats.FileInfoSuccesses), successRate)
 			}
 			
 			// Display DeleteOnClose method stats
 			if stats.DeleteOnCloseAttempts > 0 {
 				successRate := float64(stats.DeleteOnCloseSuccesses) / float64(stats.DeleteOnCloseAttempts) * 100
 				fmt.Printf("  DeleteOnClose (FILE_FLAG_DELETE_ON_CLOSE):\n")
-				fmt.Printf("    Attempts:     %s\n", formatNumber(stats.DeleteOnCloseAttempts))
-				fmt.Printf("    Successes:    %s (%.1f%%)\n", formatNumber(stats.DeleteOnCloseSuccesses), successRate)
+				fmt.Printf("    Attempts:     %s\n", progress.FormatNumber(stats.DeleteOnCloseAttempts))
+				fmt.Printf("    Successes:    %s (%.1f%%)\n", progress.FormatNumber(stats.DeleteOnCloseSuccesses), successRate)
 			}
 			
 			// Display NtAPI method stats
 			if stats.NtAPIAttempts > 0 {
 				successRate := float64(stats.NtAPISuccesses) / float64(stats.NtAPIAttempts) * 100
 				fmt.Printf("  NtAPI (NtDeleteFile):\n")
-				fmt.Printf("    Attempts:     %s\n", formatNumber(stats.NtAPIAttempts))
-				fmt.Printf("    Successes:    %s (%.1f%%)\n", formatNumber(stats.NtAPISuccesses), successRate)
+				fmt.Printf("    Attempts:     %s\n", progress.FormatNumber(stats.NtAPIAttempts))
+				fmt.Printf("    Successes:    %s (%.1f%%)\n", progress.FormatNumber(stats.NtAPISuccesses), successRate)
 			}
 			
 			// Display Fallback method stats
 			if stats.FallbackAttempts > 0 {
 				successRate := float64(stats.FallbackSuccesses) / float64(stats.FallbackAttempts) * 100
 				fmt.Printf("  Fallback (windows.DeleteFile):\n")
-				fmt.Printf("    Attempts:     %s\n", formatNumber(stats.FallbackAttempts))
-				fmt.Printf("    Successes:    %s (%.1f%%)\n", formatNumber(stats.FallbackSuccesses), successRate)
+				fmt.Printf("    Attempts:     %s\n", progress.FormatNumber(stats.FallbackAttempts))
+				fmt.Printf("    Successes:    %s (%.1f%%)\n", progress.FormatNumber(stats.FallbackSuccesses), successRate)
 			}
 			
 			fmt.Println()

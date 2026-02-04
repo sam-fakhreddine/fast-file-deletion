@@ -367,9 +367,9 @@ func TestFormatNumber(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
-			result := formatNumber(tt.input)
+			result := FormatNumber(tt.input)
 			if result != tt.expected {
-				t.Errorf("formatNumber(%d) = %s, expected %s", tt.input, result, tt.expected)
+				t.Errorf("FormatNumber(%d) = %s, expected %s", tt.input, result, tt.expected)
 			}
 		})
 	}
@@ -399,9 +399,9 @@ func TestFormatDuration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
-			result := formatDuration(tt.input)
+			result := FormatDuration(tt.input)
 			if result != tt.expected {
-				t.Errorf("formatDuration(%v) = %s, expected %s", tt.input, result, tt.expected)
+				t.Errorf("FormatDuration(%v) = %s, expected %s", tt.input, result, tt.expected)
 			}
 		})
 	}

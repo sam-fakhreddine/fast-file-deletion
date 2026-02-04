@@ -124,7 +124,7 @@ func (m *RateMonitor) GetSampleCount() int {
 // 4. The final statistics include reasonable rate calculations
 //
 // Note: This test verifies the behavior indirectly by monitoring deletion progress
-// at 5-second intervals and confirming that the adaptiveWorkerTuning goroutine
+// at 5-second intervals and confirming that the monitorDeletionRate goroutine
 // is functioning correctly (which logs rate reports every 5 seconds).
 func TestPropertyPeriodicRateReporting(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
@@ -170,7 +170,7 @@ func TestPropertyPeriodicRateReporting(t *testing.T) {
 		engine := NewEngine(backend, workers, progressCallback)
 
 		// Start a rate monitor that samples progress every 5 seconds
-		// This simulates what the adaptiveWorkerTuning goroutine does
+		// This simulates what the monitorDeletionRate goroutine does
 		monitor := NewRateMonitor(5 * time.Second)
 		monitor.Start(progressCounter)
 		defer monitor.Stop()

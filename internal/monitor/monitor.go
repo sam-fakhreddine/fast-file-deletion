@@ -13,6 +13,16 @@ import (
 	"github.com/yourusername/fast-file-deletion/internal/logger"
 )
 
+// Bottleneck detection thresholds.
+const (
+	// MemoryPressureThreshold is the fraction of Sys memory that triggers a warning.
+	MemoryPressureThreshold = 0.8
+	// GCPressureThreshold is the GC cycles/sec rate that triggers a warning.
+	GCPressureThreshold = 2.0
+	// CPUSaturationThreshold is the CPU usage percentage that triggers a warning.
+	CPUSaturationThreshold = 90.0
+)
+
 // SystemMetrics contains a snapshot of system resource usage at a point in time.
 type SystemMetrics struct {
 	Timestamp time.Time
@@ -113,13 +123,13 @@ func (m *Monitor) collectMetrics(filesDeleted int, deletionRate float64) SystemM
 	// Detect memory pressure
 	allocMB := float64(memStats.Alloc) / (1024 * 1024)
 	sysMB := float64(memStats.Sys) / (1024 * 1024)
-	memoryPressure := allocMB > (sysMB * 0.8)
+	memoryPressure := allocMB > (sysMB * MemoryPressureThreshold)
 
-	// Detect GC pressure (more than 2 GC cycles per second)
-	gcPressure := elapsed > 0 && (float64(gcCount)/elapsed) > 2.0
+	// Detect GC pressure
+	gcPressure := elapsed > 0 && (float64(gcCount)/elapsed) > GCPressureThreshold
 
 	// Detect CPU saturation
-	cpuSaturated := cpuPercent > 90
+	cpuSaturated := cpuPercent > CPUSaturationThreshold
 
 	metrics := SystemMetrics{
 		Timestamp:      now,

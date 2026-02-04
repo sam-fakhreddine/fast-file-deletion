@@ -1441,63 +1441,6 @@ func TestInvalidConfigurationHandling(t *testing.T) {
 	})
 }
 
-// TestDeletionMethodValidation tests that deletion method validation works correctly
-// Validates: Requirement 11.4 - THE FFD SHALL validate that specified deletion methods are available on the current Windows version
-func TestDeletionMethodValidation(t *testing.T) {
-	// Test that validation function exists and works
-	// On non-Windows platforms, validation should pass (methods are ignored)
-	// On Windows platforms, validation should check availability
-
-	testCases := []struct {
-		name        string
-		method      string
-		expectError bool
-	}{
-		{
-			name:        "auto method always valid",
-			method:      "auto",
-			expectError: false,
-		},
-		{
-			name:        "fileinfo method",
-			method:      "fileinfo",
-			expectError: false, // Should be valid (may use fallback internally)
-		},
-		{
-			name:        "deleteonclose method",
-			method:      "deleteonclose",
-			expectError: false, // Available on all Windows versions
-		},
-		{
-			name:        "ntapi method",
-			method:      "ntapi",
-			expectError: false, // Available on modern Windows
-		},
-		{
-			name:        "deleteapi method",
-			method:      "deleteapi",
-			expectError: false, // Always available
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Call the validation function
-			err := validateDeletionMethodAvailability(tc.method)
-
-			if tc.expectError {
-				if err == nil {
-					t.Errorf("Expected error for method %s, but got none", tc.method)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Expected no error for method %s, got: %v", tc.method, err)
-				}
-			}
-		})
-	}
-}
-
 // TestDeletionMethodInUsageText tests that the usage text includes deletion method information
 func TestDeletionMethodInUsageText(t *testing.T) {
 	// This test verifies that the usage text contains information about the --deletion-method flag

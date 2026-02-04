@@ -54,7 +54,7 @@ func TestPeriodicRateReporting(t *testing.T) {
 	ctx := context.Background()
 
 	// Perform deletion (not dry-run)
-	// The adaptiveWorkerTuning goroutine will report rate every 5 seconds
+	// The monitorDeletionRate goroutine will report rate every 5 seconds
 	startTime := time.Now()
 	result, err := engine.Delete(ctx, filesToDelete, false)
 	if err != nil {
@@ -85,7 +85,7 @@ func TestPeriodicRateReporting(t *testing.T) {
 		t.Errorf("Deletion rate is non-positive: %.2f files/sec", actualRate)
 	}
 	
-	// Note: The periodic rate reporting happens in the adaptiveWorkerTuning goroutine
+	// Note: The periodic rate reporting happens in the monitorDeletionRate goroutine
 	// which logs messages like "Deletion rate: X files/sec" every 5 seconds.
 	// These messages are visible in the test output when running with -v flag,
 	// but we don't assert on them here since they're logged, not returned.

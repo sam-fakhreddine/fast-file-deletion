@@ -66,12 +66,12 @@ func (r *Reporter) Update(deletedCount int) {
 
 	// Format and display progress
 	fmt.Printf("\rDeleting: %s / %s files (%.1f%%) | Avg Rate: %s files/sec | Elapsed: %s | ETA: %s",
-		formatNumber(deletedCount),
-		formatNumber(r.totalFiles),
+		FormatNumber(deletedCount),
+		FormatNumber(r.totalFiles),
 		percentage,
-		formatNumber(int(rate)),
-		formatDuration(elapsed),
-		formatDuration(eta),
+		FormatNumber(int(rate)),
+		FormatDuration(elapsed),
+		FormatDuration(eta),
 	)
 }
 
@@ -111,9 +111,9 @@ func (r *Reporter) calculatePercentage(deletedCount int) float64 {
 	return (float64(deletedCount) / float64(r.totalFiles)) * 100
 }
 
-// formatNumber formats a number with thousands separators (commas).
+// FormatNumber formats a number with thousands separators (commas).
 // This makes large numbers more readable (e.g., 1,234,567 instead of 1234567).
-func formatNumber(n int) string {
+func FormatNumber(n int) string {
 	if n < 1000 {
 		return fmt.Sprintf("%d", n)
 	}
@@ -153,26 +153,26 @@ func (r *Reporter) Finish(deletedCount int, failedCount int, retainedCount int) 
 
 	// Display final statistics
 	fmt.Println("\n=== Deletion Complete ===")
-	fmt.Printf("Total time: %s\n", formatDuration(totalTime))
-	fmt.Printf("Average rate: %s files/sec\n", formatNumber(int(averageRate)))
-	fmt.Printf("Successfully deleted: %s files\n", formatNumber(deletedCount))
+	fmt.Printf("Total time: %s\n", FormatDuration(totalTime))
+	fmt.Printf("Average rate: %s files/sec\n", FormatNumber(int(averageRate)))
+	fmt.Printf("Successfully deleted: %s files\n", FormatNumber(deletedCount))
 
 	if failedCount > 0 {
-		fmt.Printf("Failed to delete: %s files\n", formatNumber(failedCount))
+		fmt.Printf("Failed to delete: %s files\n", FormatNumber(failedCount))
 	}
 
 	// Display retention statistics if age filtering was used
 	if retainedCount > 0 {
-		fmt.Printf("Retained (due to age): %s files\n", formatNumber(retainedCount))
+		fmt.Printf("Retained (due to age): %s files\n", FormatNumber(retainedCount))
 	}
 
 	fmt.Println()
 }
 
-// formatDuration formats a duration in a human-readable format.
+// FormatDuration formats a duration in a human-readable format.
 // Formats as "Xh Ym Zs" for durations with hours, "Ym Zs" for minutes, or "Zs" for seconds.
 // Returns "unknown" for very large durations and "0s" for negative durations.
-func formatDuration(d time.Duration) string {
+func FormatDuration(d time.Duration) string {
 	if d >= time.Duration(math.MaxInt64) {
 		return "unknown"
 	}

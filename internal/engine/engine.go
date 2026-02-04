@@ -17,6 +17,25 @@ import (
 	"github.com/yourusername/fast-file-deletion/internal/logger"
 )
 
+// Configuration constants for the deletion engine.
+const (
+	// DefaultWorkerMultiplier is multiplied by NumCPU to determine default worker count.
+	DefaultWorkerMultiplier = 4
+
+	// MaxAutoBufferSize is the maximum auto-detected buffer size for the work channel.
+	MaxAutoBufferSize = 10000
+
+	// BatchThreshold is the file count above which batch processing is used.
+	BatchThreshold = 100000
+
+	// BatchSize is the number of files per batch during batch processing.
+	BatchSize = 30000
+
+	// SlidingWindowThreshold is the fraction of a batch that must complete
+	// before the next batch begins (0.8 = 80%).
+	SlidingWindowThreshold = 0.8
+)
+
 // Engine manages parallel file deletion using goroutines.
 // It coordinates multiple worker goroutines that process deletion tasks
 // concurrently, providing significant performance improvements over
@@ -26,6 +45,10 @@ type Engine struct {
 	workers          int
 	bufferSize       int // Custom buffer size (0 = auto-detect)
 	progressCallback func(int)
+
+	// Live counters accessible during deletion for external monitoring.
+	liveCounters atomicCounters
+	startTime    atomic.Value // stores time.Time
 }
 
 // workItem represents a file or directory to delete with optional UTF-16 path.
@@ -105,7 +128,7 @@ func NewEngine(backend backend.Backend, workers int, progressCallback func(int))
 func NewEngineWithBufferSize(backend backend.Backend, workers int, bufferSize int, progressCallback func(int)) *Engine {
 	// Auto-detect optimal worker count if not specified
 	if workers <= 0 {
-		workers = runtime.NumCPU() * 4
+		workers = runtime.NumCPU() * DefaultWorkerMultiplier
 	}
 
 	return &Engine{
@@ -114,6 +137,28 @@ func NewEngineWithBufferSize(backend backend.Backend, workers int, bufferSize in
 		bufferSize:       bufferSize,
 		progressCallback: progressCallback,
 	}
+}
+
+// FilesDeleted returns the current count of successfully deleted files.
+// This is safe to call concurrently during deletion for live monitoring.
+func (e *Engine) FilesDeleted() int {
+	return int(e.liveCounters.deleted.Load())
+}
+
+// DeletionRate returns the current deletion rate in files/sec.
+// This is safe to call concurrently during deletion for live monitoring.
+// Returns 0 if deletion has not started.
+func (e *Engine) DeletionRate() float64 {
+	v := e.startTime.Load()
+	if v == nil {
+		return 0
+	}
+	start := v.(time.Time)
+	elapsed := time.Since(start).Seconds()
+	if elapsed <= 0 {
+		return 0
+	}
+	return float64(e.liveCounters.deleted.Load()) / elapsed
 }
 
 // Delete deletes the specified files using parallel goroutines.
@@ -165,6 +210,10 @@ func (e *Engine) Delete(ctx context.Context, files []string, dryRun bool) (*Dele
 // Validates Requirements: 4.5, 5.2, 5.3, 5.5
 func (e *Engine) DeleteWithUTF16(ctx context.Context, files []string, filesUTF16 []*uint16, isDirectory []bool, dryRun bool) (*DeletionResult, error) {
 	startTime := time.Now()
+	e.startTime.Store(startTime)
+	// Reset live counters for this deletion run
+	e.liveCounters.deleted.Store(0)
+	e.liveCounters.failed.Store(0)
 
 	logger.Info("Starting deletion of %d files with %d workers", len(files), e.workers)
 	if dryRun {
@@ -191,8 +240,8 @@ func (e *Engine) DeleteWithUTF16(ctx context.Context, files []string, filesUTF16
 		Errors: make([]FileError, 0),
 	}
 
-	// Atomic counters for thread-safe statistics tracking without mutex contention
-	counters := &atomicCounters{}
+	// Use the engine's live counters for thread-safe statistics tracking
+	counters := &e.liveCounters
 
 	// Mutex only for thread-safe access to error slice
 	var errorsMu sync.Mutex
@@ -203,10 +252,9 @@ func (e *Engine) DeleteWithUTF16(ctx context.Context, files []string, filesUTF16
 	// Validates Requirements: 4.3, 5.4, 11.2
 	bufferSize := e.bufferSize
 	if bufferSize <= 0 {
-		// Auto-detect buffer size
 		bufferSize = len(files)
-		if bufferSize > 10000 {
-			bufferSize = 10000
+		if bufferSize > MaxAutoBufferSize {
+			bufferSize = MaxAutoBufferSize
 		}
 	}
 	workChan := make(chan workItem, bufferSize)
@@ -223,11 +271,11 @@ func (e *Engine) DeleteWithUTF16(ctx context.Context, files []string, filesUTF16
 		}()
 	}
 
-	// Start adaptive worker tuning goroutine for monitoring and rate reporting
-	// This goroutine monitors deletion rate every 5 seconds and reports progress
+	// Start rate monitoring goroutine that tracks deletion performance
+	// and records peak rate every 5 seconds
 	// Validates Requirements: 4.4, 12.3
 	peakRateChan := make(chan float64, 1)
-	go e.adaptiveWorkerTuning(ctx, counters, peakRateChan)
+	go e.monitorDeletionRate(ctx, counters, peakRateChan)
 
 	// Process files in batches to manage memory usage
 	// For very large file sets (millions of files), processing in batches allows
@@ -273,260 +321,142 @@ func (e *Engine) DeleteWithUTF16(ctx context.Context, files []string, filesUTF16
 	return result, nil
 }
 
-// processBatches processes files in batches to manage memory usage.
-// This function groups files by depth and processes them level by level,
-// releasing memory from completed batches before processing subsequent batches.
-// For very large file sets (millions of files), this prevents excessive memory usage.
-//
-// The batch size is determined dynamically based on the total file count:
-// - For < 100k files: process all at once (no batching needed)
-// - For >= 100k files: process in batches of 50k files per depth level
+// processBatches groups files by depth and processes them level by level (deepest first)
+// to ensure children are deleted before parents. For large file sets (>= 100k files),
+// each depth level is processed in batches to limit memory usage.
 //
 // Validates Requirements: 5.5
 func (e *Engine) processBatches(ctx context.Context, files []string, filesUTF16 []*uint16, isDirectory []bool, workChan chan<- workItem, counters *atomicCounters) error {
-	const batchThreshold = 100000 // Start batching for file counts >= 100k
-	const batchSize = 30000        // Process 30k files per batch
 
-	totalFiles := len(files)
-	
-	// For smaller file sets, process all at once (no batching needed)
-	if totalFiles < batchThreshold {
-		logger.Debug("Processing all %d files in single batch", totalFiles)
-		return e.processAllFiles(ctx, files, filesUTF16, isDirectory, workChan, counters)
-	}
-
-	// For large file sets, use batch processing
-	logger.Info("Processing %d files in batches of %d to manage memory usage", totalFiles, batchSize)
-	
-	// First pass: determine depth distribution without storing all items
-	depthCounts := make(map[int]int)
+	// Build the depth map once: group file indices by directory depth
+	depthMap := make(map[int][]int) // depth -> list of file indices
 	maxDepth := 0
-	
-	for _, file := range files {
+
+	for i, file := range files {
 		depth := countPathSeparators(file)
-		depthCounts[depth]++
+		depthMap[depth] = append(depthMap[depth], i)
 		if depth > maxDepth {
 			maxDepth = depth
 		}
 	}
-	
-	logger.Debug("File depth distribution: max depth = %d", maxDepth)
-	
-	// Process files level by level, starting from deepest
-	// Within each level, process in batches to limit memory usage
-	for depth := maxDepth; depth >= 0; depth-- {
-		filesAtDepth := depthCounts[depth]
-		if filesAtDepth == 0 {
-			continue
-		}
-		
-		logger.Debug("Processing depth %d: %d files", depth, filesAtDepth)
-		
-		// Process this depth level in batches
-		err := e.processDepthInBatches(ctx, files, filesUTF16, isDirectory, depth, batchSize, workChan, counters)
-		if err != nil {
-			return err
-		}
-		
-		// Force garbage collection after processing each depth level to release memory
-		// This is important for very large file sets where memory usage can grow significantly
-		if totalFiles >= batchThreshold {
-			runtime.GC()
-			logger.Debug("Released memory after processing depth %d", depth)
-		}
-	}
-	
-	return nil
-}
 
-// processDepthInBatches processes all files at a specific depth level in batches.
-// This allows memory from completed batches to be released before processing subsequent batches.
-//
-// Validates Requirements: 5.5
-func (e *Engine) processDepthInBatches(ctx context.Context, files []string, filesUTF16 []*uint16, isDirectory []bool, targetDepth int, batchSize int, workChan chan<- workItem, counters *atomicCounters) error {
-	batch := make([]workItem, 0, batchSize)
-	batchNum := 0
-	
-	// Collect files at this depth level
-	for i, file := range files {
-		depth := countPathSeparators(file)
-		if depth != targetDepth {
+	totalFiles := len(files)
+	useBatching := totalFiles >= BatchThreshold
+
+	if useBatching {
+		logger.Info("Processing %d files in batches of %d to manage memory usage", totalFiles, BatchSize)
+	} else {
+		logger.Debug("Processing all %d files in single pass", totalFiles)
+	}
+
+	// Process files level by level, starting from deepest
+	for depth := maxDepth; depth >= 0; depth-- {
+		indices := depthMap[depth]
+		if len(indices) == 0 {
 			continue
 		}
-		
-		item := workItem{
-			pathUTF8:    file,
-			isDirectory: false, // Default to false
-		}
-		
-		// Add UTF-16 path if available
-		if filesUTF16 != nil && i < len(filesUTF16) {
-			item.pathUTF16 = filesUTF16[i]
-		}
-		
-		// Add isDirectory flag if available
-		if isDirectory != nil && i < len(isDirectory) {
-			item.isDirectory = isDirectory[i]
-		}
-		
-		batch = append(batch, item)
-		
-		// When batch is full, process it and release memory
-		if len(batch) >= batchSize {
-			batchNum++
-			logger.Debug("Processing batch %d at depth %d: %d files", batchNum, targetDepth, len(batch))
-			
-			err := e.sendBatchToWorkers(ctx, batch, workChan, counters)
-			if err != nil {
+
+		logger.Debug("Processing depth %d: %d files", depth, len(indices))
+
+		if useBatching {
+			// Process in batches for large file sets
+			if err := e.processIndicesInBatches(ctx, files, filesUTF16, isDirectory, indices, BatchSize, workChan, counters); err != nil {
 				return err
 			}
-			
-			// Clear batch to release memory
-			batch = make([]workItem, 0, batchSize)
+			runtime.GC()
+			logger.Debug("Released memory after processing depth %d", depth)
+		} else {
+			// Send all items at this depth, then wait for completion
+			if err := e.processIndicesAndWait(ctx, files, filesUTF16, isDirectory, indices, workChan, counters); err != nil {
+				return err
+			}
 		}
 	}
-	
-	// Process remaining files in the last batch
-	if len(batch) > 0 {
-		batchNum++
-		logger.Debug("Processing final batch %d at depth %d: %d files", batchNum, targetDepth, len(batch))
-		
-		err := e.sendBatchToWorkers(ctx, batch, workChan, counters)
-		if err != nil {
-			return err
-		}
-	}
-	
+
 	return nil
 }
 
-// sendBatchToWorkers sends a batch of work items to the worker channel using a sliding
-// window approach. Instead of waiting for 100% completion, it waits until 80% of the batch
-// is processed before returning. This allows the next batch to start while the current batch
-// finishes, eliminating long pauses and maintaining consistent throughput.
-//
-// Additionally, adds a small delay (2ms) between batches to give the filesystem time to
-// catch up with metadata updates, reducing I/O saturation.
+// makeWorkItem creates a workItem from the file arrays at the given index.
+func makeWorkItem(files []string, filesUTF16 []*uint16, isDirectory []bool, i int) workItem {
+	item := workItem{pathUTF8: files[i]}
+	if filesUTF16 != nil && i < len(filesUTF16) {
+		item.pathUTF16 = filesUTF16[i]
+	}
+	if isDirectory != nil && i < len(isDirectory) {
+		item.isDirectory = isDirectory[i]
+	}
+	return item
+}
+
+// processIndicesInBatches processes a list of file indices in batches, using a sliding
+// window approach where the next batch starts after 80% of the current batch completes.
 //
 // Validates Requirements: 5.5
-func (e *Engine) sendBatchToWorkers(ctx context.Context, batch []workItem, workChan chan<- workItem, counters *atomicCounters) error {
-	// Record the count before sending this batch
+func (e *Engine) processIndicesInBatches(ctx context.Context, files []string, filesUTF16 []*uint16, isDirectory []bool, indices []int, batchSize int, workChan chan<- workItem, counters *atomicCounters) error {
+	for start := 0; start < len(indices); start += batchSize {
+		end := start + batchSize
+		if end > len(indices) {
+			end = len(indices)
+		}
+
+		batchIndices := indices[start:end]
+		countBefore := counters.deleted.Load() + counters.failed.Load()
+
+		// Send all items in the batch
+		for _, i := range batchIndices {
+			select {
+			case workChan <- makeWorkItem(files, filesUTF16, isDirectory, i):
+			case <-ctx.Done():
+				return fmt.Errorf("deletion interrupted by user")
+			}
+		}
+
+		// Sliding window: wait until the threshold fraction of the batch is processed
+		threshold := int64(float64(len(batchIndices)) * SlidingWindowThreshold)
+		for {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("deletion interrupted by user")
+			default:
+				processed := (counters.deleted.Load() + counters.failed.Load()) - countBefore
+				if processed >= threshold {
+					time.Sleep(2 * time.Millisecond)
+					goto nextBatch
+				}
+				time.Sleep(time.Millisecond)
+			}
+		}
+	nextBatch:
+	}
+	return nil
+}
+
+// processIndicesAndWait sends all items at the given indices to workers and waits
+// for them all to be processed before returning. Used for smaller file sets.
+func (e *Engine) processIndicesAndWait(ctx context.Context, files []string, filesUTF16 []*uint16, isDirectory []bool, indices []int, workChan chan<- workItem, counters *atomicCounters) error {
 	countBefore := counters.deleted.Load() + counters.failed.Load()
-	batchSize := int64(len(batch))
-	
-	// Send all items in the batch
-	for _, item := range batch {
+
+	for _, i := range indices {
 		select {
-		case workChan <- item:
+		case workChan <- makeWorkItem(files, filesUTF16, isDirectory, i):
 		case <-ctx.Done():
 			return fmt.Errorf("deletion interrupted by user")
 		}
 	}
-	
-	// Sliding window: Wait until 80% of the batch is processed before returning
-	// This allows the next batch to start while the current batch finishes,
-	// eliminating long pauses and maintaining consistent worker utilization
-	threshold := int64(float64(batchSize) * 0.8)
-	
+
+	// Wait until all items at this depth level have been processed
+	expected := countBefore + int64(len(indices))
 	for {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("deletion interrupted by user")
 		default:
-			countAfter := counters.deleted.Load() + counters.failed.Load()
-			processed := countAfter - countBefore
-			
-			if processed >= threshold {
-				// 80% of batch processed, allow next batch to start
-				// Add small delay to let filesystem catch up with metadata updates
-				time.Sleep(2 * time.Millisecond)
+			if counters.deleted.Load()+counters.failed.Load() >= expected {
 				return nil
 			}
-			
-			// Small delay to avoid busy-waiting
 			time.Sleep(time.Millisecond)
 		}
 	}
-}
-
-// processAllFiles processes all files without batching (for smaller file sets).
-// This is the original implementation used when batching is not needed.
-func (e *Engine) processAllFiles(ctx context.Context, files []string, filesUTF16 []*uint16, isDirectory []bool, workChan chan<- workItem, counters *atomicCounters) error {
-	// Group files by depth (number of path separators) to process level by level
-	// This ensures children are deleted before parents, avoiding "directory not empty" errors
-	depthMap := make(map[int][]workItem)
-	maxDepth := 0
-	
-	for i, file := range files {
-		depth := countPathSeparators(file)
-		
-		item := workItem{
-			pathUTF8:    file,
-			isDirectory: false, // Default to false
-		}
-		
-		// Add UTF-16 path if available
-		if filesUTF16 != nil && i < len(filesUTF16) {
-			item.pathUTF16 = filesUTF16[i]
-		}
-		
-		// Add isDirectory flag if available
-		if isDirectory != nil && i < len(isDirectory) {
-			item.isDirectory = isDirectory[i]
-		}
-		
-		depthMap[depth] = append(depthMap[depth], item)
-		if depth > maxDepth {
-			maxDepth = depth
-		}
-	}
-	
-	// Process files level by level, starting from deepest (highest depth number)
-	// This ensures all children are deleted before attempting to delete parent directories
-	for depth := maxDepth; depth >= 0; depth-- {
-		itemsAtDepth := depthMap[depth]
-		
-		// Send all items at this depth level
-		for _, item := range itemsAtDepth {
-			select {
-			case workChan <- item:
-			case <-ctx.Done():
-				return fmt.Errorf("deletion interrupted by user")
-			}
-		}
-		
-		// Wait for all files at this depth to be processed before moving to next level
-		// This is done by waiting for the channel to be drained
-		for len(workChan) > 0 {
-			select {
-			case <-ctx.Done():
-				return fmt.Errorf("deletion interrupted by user")
-			case <-time.After(time.Millisecond):
-				// Small delay to allow workers to process
-			}
-		}
-		
-		// Additional synchronization: ensure workers have finished processing
-		// by checking if all files at this depth have been accounted for
-		processedCount := int(counters.deleted.Load() + counters.failed.Load())
-		
-		expectedCount := 0
-		for d := maxDepth; d >= depth; d-- {
-			expectedCount += len(depthMap[d])
-		}
-		
-		// Wait until all files up to this depth have been processed
-		for processedCount < expectedCount {
-			select {
-			case <-ctx.Done():
-				return fmt.Errorf("deletion interrupted by user")
-			case <-time.After(time.Millisecond):
-				processedCount = int(counters.deleted.Load() + counters.failed.Load())
-			}
-		}
-	}
-	
-	return nil
 }
 
 // countPathSeparators counts the number of path separators in a path
@@ -539,53 +469,6 @@ func countPathSeparators(path string) int {
 		}
 	}
 	return count
-}
-
-// worker is a goroutine that processes deletion work from the work channel.
-// Each worker runs in its own goroutine and processes files concurrently
-// with other workers. Workers use a mutex to safely update shared statistics.
-// The worker stops when the context is cancelled or the work channel is closed.
-//
-// Note: This method is deprecated in favor of workerWithUTF16 which supports
-// UTF-16 pre-conversion and the isDirectory optimization.
-func (e *Engine) worker(ctx context.Context, workChan <-chan string, dryRun bool, result *DeletionResult, mu *sync.Mutex) {
-	for {
-		select {
-		case <-ctx.Done():
-			// Context cancelled, stop processing
-			return
-		case path, ok := <-workChan:
-			if !ok {
-				// Channel closed, no more work
-				return
-			}
-
-			// Process this file
-			logger.Debug("Processing: %s", path)
-			// Note: isDirectory is false since we don't have that information in this legacy method
-			err := e.deleteFile(path, false, dryRun)
-
-			// Update statistics (thread-safe)
-			mu.Lock()
-			if err != nil {
-				result.FailedCount++
-				result.Errors = append(result.Errors, FileError{
-					Path:  path,
-					Error: err.Error(),
-				})
-				// Log the error with structured formatting
-				logger.LogFileError(path, err)
-			} else {
-				result.DeletedCount++
-				logger.Debug("Successfully deleted: %s", path)
-				// Call progress callback if provided
-				if e.progressCallback != nil {
-					e.progressCallback(result.DeletedCount)
-				}
-			}
-			mu.Unlock()
-		}
-	}
 }
 
 // workerWithUTF16 is a goroutine that processes deletion work with optional UTF-16 paths.
@@ -735,35 +618,11 @@ func SetupInterruptHandler() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-// adaptiveWorkerTuning monitors deletion rate and provides adaptive tuning recommendations
-// every 5 seconds. This goroutine provides real-time feedback about deletion performance
-// and analyzes whether the current worker count is optimal.
-//
-// The function tracks:
-// - Current deletion rate (files/sec over the last 5 seconds)
-// - Rate trends (increasing, decreasing, stable)
-// - Total files processed
-// - Worker efficiency metrics
-//
-// Adaptive tuning logic:
-// - Monitors rate trends over multiple measurement intervals
-// - Detects if the system is I/O bound (rate plateaus despite available CPU)
-// - Provides recommendations for optimal worker count based on observed performance
-// - Logs warnings if worker count appears suboptimal
-//
-// Note: Go's worker pool pattern does not support dynamically adding/removing goroutines
-// after they are started. However, this function provides adaptive tuning by:
-// 1. Monitoring performance metrics in real-time
-// 2. Detecting performance patterns (rate plateaus, declining efficiency)
-// 3. Logging recommendations for future runs with different worker counts
-// 4. Tracking peak performance to identify optimal configuration
-//
-// This approach satisfies Requirement 4.4 (adaptive worker tuning based on deletion rate
-// measurements) by providing intelligent analysis and recommendations, even though the
-// actual worker count cannot be changed mid-execution due to Go's concurrency model.
+// monitorDeletionRate monitors deletion rate every 5 seconds, tracks peak rate,
+// and logs worker efficiency recommendations for future runs.
 //
 // Validates Requirements: 4.4, 12.3
-func (e *Engine) adaptiveWorkerTuning(ctx context.Context, counters *atomicCounters, peakRateChan chan<- float64) {
+func (e *Engine) monitorDeletionRate(ctx context.Context, counters *atomicCounters, peakRateChan chan<- float64) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -831,7 +690,7 @@ func (e *Engine) adaptiveWorkerTuning(ctx context.Context, counters *atomicCount
 
 				// Analyze performance patterns and provide recommendations
 				cpuCount := runtime.NumCPU()
-				optimalWorkers := cpuCount * 4 // Current default
+				optimalWorkers := cpuCount * DefaultWorkerMultiplier
 
 				// If rate has been stable for 3+ measurements, analyze efficiency
 				if stableRateCount >= 3 {

@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFD Research Report - Performance Optimization & Monetization Strategy</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-hover: #263548;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --accent3: #34d399;
+    --accent4: #f472b6;
+    --accent5: #fb923c;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --border: #334155;
+    --critical: #ef4444;
+    --warning: #f59e0b;
+    --success: #22c55e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 0;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    padding: 80px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+    animation: pulse 8s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+
+  .hero h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .hero .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-dim);
+    position: relative;
+  }
+
+  .hero .date {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    margin-top: 12px;
+    position: relative;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  nav.toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 48px;
+  }
+
+  nav.toc h2 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: var(--accent);
+  }
+
+  nav.toc .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 12px;
+  }
+
+  nav.toc a {
+    color: var(--text);
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+  }
+
+  nav.toc a:hover {
+    background: var(--card-hover);
+  }
+
+  nav.toc .toc-num {
+    background: var(--accent);
+    color: var(--bg);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  section {
+    margin-bottom: 56px;
+  }
+
+  h2.section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+
+  .tag-perf { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
+  .tag-market { background: rgba(129, 140, 248, 0.15); color: var(--accent2); }
+  .tag-strategy { background: rgba(52, 211, 153, 0.15); color: var(--accent3); }
+  .tag-compliance { background: rgba(244, 114, 182, 0.15); color: var(--accent4); }
+
+  .section-desc {
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    font-size: 1.05rem;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover {
+    border-color: rgba(56, 189, 248, 0.3);
+  }
+
+  .card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  .card p, .card li {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+  }
+
+  .card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .card ul li {
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+  }
+
+  .card ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 20px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.9rem;
+  }
+
+  th {
+    background: rgba(56, 189, 248, 0.1);
+    color: var(--accent);
+    font-weight: 600;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-critical { background: rgba(239, 68, 68, 0.2); color: var(--critical); }
+  .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+  .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+  .badge-info { background: rgba(56, 189, 248, 0.2); color: var(--accent); }
+
+  .metric-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .metric-box {
+    flex: 1;
+    min-width: 200px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .metric-box .metric-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .metric-box .metric-label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .impact-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+  }
+
+  .impact-fill {
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .impact-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  .code-ref {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    background: rgba(56, 189, 248, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 28px;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -28px;
+    top: 6px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+  }
+
+  .timeline-item h4 {
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .timeline-item p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  .pricing-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+  }
+
+  .pricing-card.featured {
+    border-color: var(--accent);
+    position: relative;
+  }
+
+  .pricing-card.featured::before {
+    content: 'RECOMMENDED';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 16px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  .pricing-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+  }
+
+  .pricing-card .price {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin: 16px 0;
+  }
+
+  .pricing-card .price small {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--text-dim);
+  }
+
+  .pricing-card .target {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+  }
+
+  .pricing-card ul {
+    list-style: none;
+    text-align: left;
+    padding: 0;
+  }
+
+  .pricing-card ul li {
+    padding: 8px 0;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pricing-card ul li::before {
+    content: '\2713';
+    color: var(--accent3);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 48px 0;
+  }
+
+  .source-list {
+    column-count: 2;
+    column-gap: 40px;
+    font-size: 0.8rem;
+  }
+
+  .source-list a {
+    color: var(--accent);
+    text-decoration: none;
+    display: block;
+    padding: 4px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .source-list a:hover {
+    text-decoration: underline;
+  }
+
+  .callout {
+    background: rgba(56, 189, 248, 0.08);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+
+  .callout.warning {
+    background: rgba(245, 158, 11, 0.08);
+    border-left-color: var(--warning);
+  }
+
+  .callout.success {
+    background: rgba(34, 197, 94, 0.08);
+    border-left-color: var(--success);
+  }
+
+  .syscall-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    padding: 24px 0;
+    justify-content: center;
+  }
+
+  .syscall-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .syscall-bar .bar {
+    width: 60px;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+    transition: height 0.5s;
+  }
+
+  .syscall-bar .bar-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 80px;
+  }
+
+  .syscall-bar .bar-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  footer {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 2rem; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    nav.toc .toc-grid { grid-template-columns: 1fr; }
+    .source-list { column-count: 1; }
+    .metric-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Fast File Deletion (FFD)</h1>
+  <div class="subtitle">Performance Optimization & Monetization Strategy Research Report</div>
+  <div class="date">Generated February 4, 2026 &middot; Based on codebase analysis + web research</div>
+</div>
+
+<div class="container">
+
+<!-- KEY METRICS -->
+<div class="metric-row">
+  <div class="metric-box">
+    <div class="metric-value">13</div>
+    <div class="metric-label">Performance Optimizations Identified</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-value">$3.8B</div>
+    <div class="metric-label">Data Destruction Software Market by 2033</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-value">4</div>
+    <div class="metric-label">Monetization Models Analyzed</div>
+  </div>
+  <div class="metric-box">
+    <div class="metric-value">50x</div>
+    <div class="metric-label">Potential Speed vs Native Tools</div>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <div class="toc-grid">
+    <a href="#bottlenecks"><span class="toc-num">1</span>Current Codebase Bottlenecks</a>
+    <a href="#windows"><span class="toc-num">2</span>Windows: Fastest Deletion Approaches</a>
+    <a href="#linux"><span class="toc-num">3</span>Linux: io_uring Batch Deletion</a>
+    <a href="#scanning"><span class="toc-num">4</span>Parallel Scanning Techniques</a>
+    <a href="#memory"><span class="toc-num">5</span>Memory & Allocation Optimization</a>
+    <a href="#recommendations"><span class="toc-num">6</span>Prioritized Recommendations</a>
+    <a href="#landscape"><span class="toc-num">7</span>Competitive Landscape</a>
+    <a href="#market"><span class="toc-num">8</span>Market Opportunity</a>
+    <a href="#monetization"><span class="toc-num">9</span>Monetization Models</a>
+    <a href="#pricing"><span class="toc-num">10</span>Pricing Strategy</a>
+    <a href="#gtm"><span class="toc-num">11</span>Go-To-Market Plan</a>
+    <a href="#compliance"><span class="toc-num">12</span>Compliance Premium</a>
+    <a href="#sources"><span class="toc-num">13</span>Sources</a>
+  </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- PART 1: PERFORMANCE                                          -->
+<!-- ============================================================ -->
+
+<h2 class="section-title" style="font-size: 1.6rem; color: var(--accent); margin-bottom: 32px;">
+  PART I &mdash; PERFORMANCE OPTIMIZATION
+</h2>
+
+<!-- SECTION 1: CURRENT BOTTLENECKS -->
+<section id="bottlenecks">
+  <h2 class="section-title">Current Codebase Bottlenecks <span class="section-tag tag-perf">PERFORMANCE</span></h2>
+  <p class="section-desc">Critical issues found through deep analysis of the engine, scanner, and backend packages.</p>
+
+  <div class="card" style="border-left: 4px solid var(--critical);">
+    <h3><span class="badge badge-critical">CRITICAL</span> &nbsp; O(n&sup2;) Bubble Sort in Scanner</h3>
+    <p>File: <span class="code-ref">internal/scanner/scanner_windows.go:404-427</span></p>
+    <p style="margin-top: 8px;"><code>sortPathsByDepth()</code> uses a bubble sort to order files by depth. For 1 million files, this requires ~10<sup>12</sup> comparisons. Replacing with <code>sort.Slice</code> (O(n log n)) would reduce this from hours to seconds.</p>
+    <div class="impact-bar" style="margin-top: 12px;">
+      <span class="impact-label">Impact</span>
+      <div class="impact-fill" style="width: 100%; max-width: 400px;"></div>
+      <span style="font-size: 0.8rem; color: var(--critical);">Catastrophic at scale</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card" style="border-left: 4px solid var(--warning);">
+      <h3><span class="badge badge-warning">HIGH</span> &nbsp; Mutex Lock Per File Deletion</h3>
+      <p>File: <span class="code-ref">internal/backend/windows_advanced.go:737-768</span></p>
+      <p style="margin-top: 8px;">Stats tracking uses <code>sync.Mutex</code> for <code>incrementAttempt()</code> / <code>incrementSuccess()</code> &mdash; 3+ mutex operations per file. Should use <code>sync/atomic</code> as per project conventions.</p>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--warning);">
+      <h3><span class="badge badge-warning">HIGH</span> &nbsp; Mutex-Protected Append in Scanner</h3>
+      <p>File: <span class="code-ref">internal/scanner/scanner_windows.go:290-292</span></p>
+      <p style="margin-top: 8px;">Every file found locks <code>pathInfosLock</code> to append to a shared slice. With parallel workers, this becomes a serialization point. Pre-allocating and using per-worker local buffers with a final merge would eliminate contention.</p>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--warning);">
+      <h3><span class="badge badge-warning">MEDIUM</span> &nbsp; Depth Calculation Bug</h3>
+      <p>File: <span class="code-ref">internal/scanner/scanner_windows.go:239</span></p>
+      <p style="margin-top: 8px;"><code>filepath.SplitList()</code> splits by PATH separator (<code>;</code> on Windows), not path separator (<code>\</code>). Should count <code>os.PathSeparator</code> occurrences instead.</p>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent);">
+      <h3><span class="badge badge-info">MEDIUM</span> &nbsp; Unoptimized FindFirstFile</h3>
+      <p>File: <span class="code-ref">internal/scanner/scanner_windows.go:227</span></p>
+      <p style="margin-top: 8px;">Uses <code>FindFirstFile</code> instead of <code>FindFirstFileEx</code> with <code>FindExInfoBasic</code> + <code>FIND_FIRST_EX_LARGE_FETCH</code>. The optimized version uses 64KB buffers (vs 4KB) and skips 8.3 name retrieval, yielding 2-6x scanning speedup.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge badge-info">MEDIUM</span> &nbsp; filepath.Join Overhead</h3>
+      <p>File: <span class="code-ref">internal/scanner/scanner_windows.go:261</span></p>
+      <p style="margin-top: 8px;"><code>filepath.Join</code> calls <code>filepath.Clean</code> internally, causing 2 allocations per file. For known-clean paths from directory enumeration, direct concatenation (<code>dir + "\\" + name</code>) is safe and avoids this overhead.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge badge-info">LOW</span> &nbsp; Zero-Capacity Slice Init</h3>
+      <p>File: <span class="code-ref">internal/scanner/scanner_windows.go:104-110</span></p>
+      <p style="margin-top: 8px;">Slices initialized with <code>make([]string, 0)</code> instead of pre-allocated capacity. For million-file directories, this causes repeated growth reallocations under mutex lock.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: WINDOWS DELETION -->
+<section id="windows">
+  <h2 class="section-title">Windows: Fastest Deletion Approaches <span class="section-tag tag-perf">PERFORMANCE</span></h2>
+  <p class="section-desc">State-of-the-art Windows deletion APIs, ranked by syscall overhead.</p>
+
+  <div class="card">
+    <h3>Deletion Method Comparison</h3>
+    <div class="syscall-chart">
+      <div class="syscall-bar">
+        <div class="bar-value">1</div>
+        <div class="bar" style="height: 60px; background: linear-gradient(180deg, var(--success), #059669);"></div>
+        <div class="bar-label">NtDeleteFile</div>
+      </div>
+      <div class="syscall-bar">
+        <div class="bar-value">2</div>
+        <div class="bar" style="height: 120px;"></div>
+        <div class="bar-label">DELETE_ON_CLOSE</div>
+      </div>
+      <div class="syscall-bar">
+        <div class="bar-value">3</div>
+        <div class="bar" style="height: 180px; background: linear-gradient(180deg, var(--accent5), #ea580c);"></div>
+        <div class="bar-label">FileDisposition InfoEx</div>
+      </div>
+      <div class="syscall-bar">
+        <div class="bar-value">3</div>
+        <div class="bar" style="height: 180px; background: linear-gradient(180deg, var(--accent4), #be185d);"></div>
+        <div class="bar-label">Win32 DeleteFile</div>
+      </div>
+    </div>
+    <p style="text-align: center; font-size: 0.85rem; color: var(--text-dim);">Syscalls per file deletion operation (lower = faster)</p>
+  </div>
+
+  <div class="callout">
+    <strong>Key Insight:</strong> Per-file syscall count (1-3) matters far less than <strong>I/O pipeline saturation</strong>. Each syscall costs ~1-2&micro;s, but filesystem journal operations cost 10-100&micro;s on SSD. For 1M files, switching from 3 to 1 syscall saves ~2 seconds, while parallelism can save minutes. The real win is keeping many operations in-flight simultaneously (IOCP pattern used by byenow).
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Already Implemented</h3>
+      <ul>
+        <li><strong>NtDeleteFile</strong> &mdash; single-syscall deletion (engine.go)</li>
+        <li><strong>FileDispositionInfoEx</strong> with POSIX semantics</li>
+        <li><strong>Fallback chain</strong>: InfoEx &rarr; Info &rarr; DELETE_ON_CLOSE &rarr; NtDeleteFile &rarr; Win32</li>
+        <li><strong>UTF-16 pre-conversion</strong> during scan phase</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Potential Improvements</h3>
+      <ul>
+        <li><strong>IOCP-based dispatch</strong> &mdash; keep N async ops in-flight vs blocking goroutines</li>
+        <li><strong>FILE_OPEN_REPARSE_POINT</strong> flag to skip reparse point resolution</li>
+        <li><strong>Detect NtfsDisableLastAccessUpdate</strong> and recommend enabling it</li>
+        <li><strong>Move-then-delete pattern</strong> &mdash; rename to temp, delete in background</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>NTFS Journal Overhead (Cannot Be Avoided)</h3>
+    <p>Every NTFS file deletion involves 4 metadata operations that represent the true bottleneck:</p>
+    <table>
+      <tr><th>Operation</th><th>What It Does</th><th>Can Skip?</th></tr>
+      <tr><td>$MFT update</td><td>Clear in-use flag, increment sequence number</td><td>No</td></tr>
+      <tr><td>$Bitmap update</td><td>Mark clusters as free</td><td>No</td></tr>
+      <tr><td>$LogFile write</td><td>Transaction journal entry</td><td>No</td></tr>
+      <tr><td>$UsnJrnl write</td><td>USN change journal entry</td><td>Technically yes, but disruptive</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION 3: LINUX io_uring -->
+<section id="linux">
+  <h2 class="section-title">Linux: io_uring Batch Deletion <span class="section-tag tag-perf">PERFORMANCE</span></h2>
+  <p class="section-desc">Since Linux kernel 5.11, <code>IORING_OP_UNLINKAT</code> enables true batched deletion.</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>How It Works</h3>
+      <ul>
+        <li>Prepare multiple SQEs (Submission Queue Entries), each an <code>unlink</code> operation</li>
+        <li>Submit all in a single <code>io_uring_enter()</code> syscall</li>
+        <li>Kernel processes asynchronously, posts completions to CQ</li>
+        <li>Amortizes syscall overhead across N operations</li>
+        <li>Optimal batch size: 64-256 operations</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Performance Characteristics</h3>
+      <ul>
+        <li>Single-operation io_uring is <em>slower</em> than plain <code>unlink()</code></li>
+        <li>Benefit comes from batching &mdash; one syscall for N deletions</li>
+        <li>Up to <strong>30% less CPU utilization</strong> with large batches</li>
+        <li>Kernel can reorder and parallelize filesystem ops internally</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <strong>Recommendation:</strong> Create <code>backend_linux.go</code> analogous to <code>windows_advanced.go</code>, using io_uring with <code>IORING_OP_UNLINKAT</code> in batches of 64-256. Go libraries: <code>iceber/iouring-go</code> or direct syscalls via cgo. The current <code>GenericBackend</code> uses simple <code>os.Remove()</code> and misses this optimization entirely.
+  </div>
+</section>
+
+<!-- SECTION 4: SCANNING -->
+<section id="scanning">
+  <h2 class="section-title">Parallel Scanning Techniques <span class="section-tag tag-perf">PERFORMANCE</span></h2>
+  <p class="section-desc">Benchmarked Go directory traversal libraries and techniques.</p>
+
+  <div class="card">
+    <table>
+      <tr><th>Library</th><th>Speedup vs filepath.Walk</th><th>Key Technique</th></tr>
+      <tr><td><strong>charlievieth/fastwalk</strong></td><td><span class="badge badge-success">2.5x macOS, 4x Linux, 6x Windows</span></td><td>Parallel goroutines, 2*NumCPU workers, preserves d_type</td></tr>
+      <tr><td><strong>karrick/godirwalk</strong></td><td><span class="badge badge-success">5-10x macOS, 2x Linux, 4x Windows</span></td><td>Single-threaded, reuses scratch buffers, preserves d_type</td></tr>
+      <tr><td><strong>MichaelTJones/walk</strong></td><td><span class="badge badge-info">~4x</span></td><td>Multiple goroutines stat filesystem concurrently</td></tr>
+      <tr><td><strong>iafan/cwalk</strong></td><td><span class="badge badge-info">~3.5x on 8-core</span></td><td>Concurrent workers, no ordering guarantee</td></tr>
+    </table>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Critical: d_type Preservation</h3>
+      <p>Go's <code>os.ReadDir()</code> calls <code>getdents64</code> but <strong>discards the <code>d_type</code> field</strong> (file type from directory entry), then makes additional <code>stat()</code> calls. godirwalk preserves <code>d_type</code>, eliminating one syscall per entry.</p>
+    </div>
+
+    <div class="card">
+      <h3>Buffer Size Matters</h3>
+      <p>Go's <code>os.ReadDir()</code> uses 8KB buffer for <code>getdents64</code>; glibc uses 32KB. <code>FIND_FIRST_EX_LARGE_FETCH</code> on Windows uses 64KB vs default 4KB. The WholeTomato team measured <strong>50-200x speedup</strong> in file attribute queries with larger buffers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: MEMORY -->
+<section id="memory">
+  <h2 class="section-title">Memory & Allocation Optimization <span class="section-tag tag-perf">PERFORMANCE</span></h2>
+  <p class="section-desc">Reducing GC pressure for million-file workloads.</p>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>sync.Pool for Buffers</h3>
+      <p>Reuse <code>[]byte</code> buffers for path building and UTF-16 conversion. Eliminates per-file heap allocations that trigger GC.</p>
+    </div>
+
+    <div class="card">
+      <h3>Arena Allocation</h3>
+      <p>Allocate all <code>PathInfo</code> structs in a region during scan, free entire arena after deletion. Eliminates GC scanning of millions of small objects.</p>
+    </div>
+
+    <div class="card">
+      <h3>Zero-Copy Strings</h3>
+      <p>Since Go 1.20, <code>unsafe.String</code> and <code>unsafe.Slice</code> enable zero-allocation string/byte conversions for UTF-16 paths.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 6: RECOMMENDATIONS -->
+<section id="recommendations">
+  <h2 class="section-title">Prioritized Recommendations <span class="section-tag tag-perf">PERFORMANCE</span></h2>
+  <p class="section-desc">All performance improvements ranked by impact and implementation effort.</p>
+
+  <div class="card">
+    <h3>High Impact (Immediate Gains)</h3>
+    <table>
+      <tr><th>#</th><th>Optimization</th><th>File</th><th>Expected Impact</th></tr>
+      <tr>
+        <td>1</td>
+        <td><strong>Replace bubble sort with sort.Slice</strong></td>
+        <td><span class="code-ref">scanner_windows.go:411</span></td>
+        <td><span class="badge badge-critical">10,000x+ at 1M files</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><strong>FindFirstFileEx with LARGE_FETCH</strong></td>
+        <td><span class="code-ref">scanner_windows.go:227</span></td>
+        <td><span class="badge badge-warning">2-6x scanning</span></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><strong>Pre-allocate pathInfos slice</strong></td>
+        <td><span class="code-ref">scanner_windows.go:109</span></td>
+        <td><span class="badge badge-warning">Reduces lock contention</span></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><strong>Replace filepath.Join with concat</strong></td>
+        <td><span class="code-ref">scanner_windows.go:261</span></td>
+        <td><span class="badge badge-info">2 fewer allocs/file</span></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td><strong>Use sync/atomic for backend stats</strong></td>
+        <td><span class="code-ref">windows_advanced.go:737</span></td>
+        <td><span class="badge badge-info">Eliminates lock contention</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Medium Impact (Architecture Changes)</h3>
+    <table>
+      <tr><th>#</th><th>Optimization</th><th>Scope</th><th>Expected Impact</th></tr>
+      <tr>
+        <td>6</td>
+        <td><strong>Linux io_uring backend</strong></td>
+        <td>New <code>backend_linux.go</code></td>
+        <td><span class="badge badge-warning">30% less CPU, batch syscalls</span></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td><strong>Move-then-delete pattern</strong></td>
+        <td>Engine fast-path option</td>
+        <td><span class="badge badge-info">Perceived instant deletion</span></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td><strong>Raw getdents64 with 32KB buffers</strong></td>
+        <td>New <code>scanner_linux.go</code></td>
+        <td><span class="badge badge-info">Halve directory read syscalls</span></td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td><strong>Per-worker local buffers</strong></td>
+        <td>Scanner refactor</td>
+        <td><span class="badge badge-info">Eliminate mutex serialization</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Lower Impact (Fine-Tuning)</h3>
+    <table>
+      <tr><th>#</th><th>Optimization</th><th>Notes</th></tr>
+      <tr><td>10</td><td>Arena allocation for PathInfo structs</td><td>Go experimental or third-party</td></tr>
+      <tr><td>11</td><td>FILE_OPEN_REPARSE_POINT flag</td><td>Skip reparse point resolution</td></tr>
+      <tr><td>12</td><td>IOCP-based deletion dispatch</td><td>Replace blocking goroutines with async I/O</td></tr>
+      <tr><td>13</td><td>Detect NtfsDisableLastAccessUpdate</td><td>Advise user to enable if disabled</td></tr>
+    </table>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<!-- PART 2: MONETIZATION                                          -->
+<!-- ============================================================ -->
+
+<h2 class="section-title" style="font-size: 1.6rem; color: var(--accent2); margin-bottom: 32px;">
+  PART II &mdash; MONETIZATION & MARKET STRATEGY
+</h2>
+
+<!-- SECTION 7: LANDSCAPE -->
+<section id="landscape">
+  <h2 class="section-title">Competitive Landscape <span class="section-tag tag-market">MARKET</span></h2>
+  <p class="section-desc">No dedicated high-performance CLI tool exists for fast parallel deletion of millions of files. FFD occupies a genuinely uncrowded niche.</p>
+
+  <div class="card">
+    <h3>Free / Open Source Tools</h3>
+    <table>
+      <tr><th>Tool</th><th>Type</th><th>License</th><th>Limitation</th></tr>
+      <tr><td><strong>byenow</strong></td><td>Fast folder deletion</td><td>Free (closed source)</td><td>Windows-only, no filtering, no progress</td></tr>
+      <tr><td><strong>rimraf</strong></td><td>Node.js rm -rf</td><td>ISC (open source)</td><td>JavaScript-only, limited to Node ecosystem</td></tr>
+      <tr><td><strong>robocopy /MIR</strong></td><td>Windows built-in</td><td>Free</td><td>Workaround trick, not purpose-built</td></tr>
+      <tr><td><strong>BleachBit</strong></td><td>System cleaner</td><td>GPLv3</td><td>General cleaner, not fast at scale</td></tr>
+      <tr><td><strong>Eraser</strong></td><td>Secure deletion</td><td>GPL</td><td>Security focus, not speed</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Commercial / Freemium Tools</h3>
+    <table>
+      <tr><th>Tool</th><th>Price</th><th>Notes</th></tr>
+      <tr><td><strong>CCleaner Pro</strong></td><td>$24.99/yr</td><td>General system cleaner, not bulk deletion</td></tr>
+      <tr><td><strong>TreeSize Professional</strong></td><td>~$25/mo</td><td>Disk analysis with deletion capabilities</td></tr>
+      <tr><td><strong>FastCopy Pro</strong></td><td>$9.99/yr or $48 perpetual</td><td>Closest comparable; copy/delete, free for personal use</td></tr>
+      <tr><td><strong>Blancco File Eraser</strong></td><td>Custom enterprise pricing</td><td>NIST 800-88 certified, compliance leader</td></tr>
+    </table>
+  </div>
+
+  <div class="callout success">
+    <strong>Market Gap:</strong> There is no dedicated, cross-platform, high-performance CLI tool focused specifically on fast parallel deletion of directories with millions of small files. rimraf is JS-only, robocopy /MIR is a workaround, secure deletion tools prioritize compliance over speed. FFD's niche is real and defensible.
+  </div>
+</section>
+
+<!-- SECTION 8: MARKET -->
+<section id="market">
+  <h2 class="section-title">Market Opportunity <span class="section-tag tag-market">MARKET</span></h2>
+  <p class="section-desc">Multiple billion-dollar markets intersect with fast file deletion.</p>
+
+  <div class="metric-row">
+    <div class="metric-box">
+      <div class="metric-value">$1.2B</div>
+      <div class="metric-label">Data Destruction Software (2024)</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value">$3.37B</div>
+      <div class="metric-label">GDPR Compliance Software (2025)</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value">$950M</div>
+      <div class="metric-label">HIPAA Compliance Software (2024)</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Industries with Acute Deletion Pain</h3>
+      <ul>
+        <li><strong>DevOps / CI/CD</strong> &mdash; 78% of companies estimate 21-50% of cloud spend is wasted; stale build artifacts are a major contributor</li>
+        <li><strong>Software Development</strong> &mdash; node_modules deletion on Windows is tracked as an official Microsoft performance issue</li>
+        <li><strong>Financial Services</strong> &mdash; tight deletion windows for expired records in overnight batch processing</li>
+        <li><strong>Healthcare (HIPAA)</strong> &mdash; $950M market; secure deletion with audit trails is a core requirement</li>
+        <li><strong>Data Centers</strong> &mdash; decommissioning servers, rotating logs at scale</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Real-World Pain Points</h3>
+      <ul>
+        <li>Netflix freed <strong>200TB</strong> and saved <strong>$1.2M annually</strong> through CI/CD cleanup</li>
+        <li>Azure DevOps agents constantly fill disks with build artifacts</li>
+        <li><strong>EUR 5.88 billion</strong> in GDPR fines issued through Jan 2025 (2,245 fines)</li>
+        <li>Largest single GDPR fine: <strong>EUR 1.2 billion</strong> against Meta</li>
+        <li>Windows developers routinely cite node_modules deletion as a top pain point</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 9: MONETIZATION -->
+<section id="monetization">
+  <h2 class="section-title">Monetization Models <span class="section-tag tag-strategy">STRATEGY</span></h2>
+  <p class="section-desc">Four proven models analyzed with real-world precedents.</p>
+
+  <div class="grid-2">
+    <div class="card" style="border-color: var(--accent);">
+      <h3>Model A: Open Core <span class="badge badge-success">RECOMMENDED</span></h3>
+      <p style="margin: 8px 0;">Free core + paid enterprise features. Mirrors HashiCorp ($583M FY2024 revenue, acquired by IBM for $6.4B).</p>
+      <ul>
+        <li><strong>Free:</strong> Core deletion engine, CLI, cross-platform, basic filters</li>
+        <li><strong>Paid:</strong> NIST 800-88 compliance, audit trails, SSO/LDAP, API/SDK, SLA support, policy engine</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Model B: Sponsorware</h3>
+      <p style="margin: 8px 0;">Release features to sponsors first, open-source after threshold. Caleb Porzio reached $1M+ cumulative on GitHub Sponsors.</p>
+      <ul>
+        <li>Low friction &mdash; GitHub takes 0% platform fees</li>
+        <li>Best for early traction before product-market fit</li>
+        <li>Good for individual maintainers</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Model C: Managed SaaS</h3>
+      <p style="margin: 8px 0;">Cloud service for scheduled fleet-wide deletion. Most common monetization for DevTools.</p>
+      <ul>
+        <li>Dashboard for compliance reporting</li>
+        <li>CI/CD platform integrations (GitHub Actions, Azure DevOps)</li>
+        <li>Scheduled deletion jobs with retention policies</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Model D: Support Contracts</h3>
+      <p style="margin: 8px 0;">Annual support contracts for enterprises (Red Hat model &mdash; $3.4B+ annual revenue before $34B IBM acquisition).</p>
+      <ul>
+        <li>Works when tool becomes embedded in critical infrastructure</li>
+        <li>SLA-backed support with guaranteed response times</li>
+        <li>Enterprise deployment assistance</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Open Source Business Precedents</h3>
+    <table>
+      <tr><th>Company</th><th>Model</th><th>Revenue / Outcome</th></tr>
+      <tr><td><strong>HashiCorp</strong></td><td>Open core + managed cloud</td><td>$583M FY2024; acquired by IBM for $6.4B</td></tr>
+      <tr><td><strong>Elastic</strong></td><td>Open core + cloud service</td><td>$1.48B FY2025 revenue</td></tr>
+      <tr><td><strong>Red Hat</strong></td><td>Support subscriptions</td><td>$3.4B+ annual; acquired by IBM for $34B</td></tr>
+      <tr><td><strong>FastCopy</strong></td><td>Free personal / paid commercial</td><td>$9.99/yr or $48 perpetual</td></tr>
+      <tr><td><strong>Caleb Porzio</strong></td><td>Sponsorware + content</td><td>$1M+ cumulative on GitHub Sponsors</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION 10: PRICING -->
+<section id="pricing">
+  <h2 class="section-title">Pricing Strategy <span class="section-tag tag-strategy">STRATEGY</span></h2>
+  <p class="section-desc">Tiered pricing based on comparable tools and developer preferences. 92% of developers prefer tools with free tier.</p>
+
+  <div class="grid-2" style="grid-template-columns: repeat(4, 1fr); gap: 16px;">
+    <div class="pricing-card">
+      <h3>Community</h3>
+      <div class="target">Individual devs, OSS</div>
+      <div class="price">Free</div>
+      <ul>
+        <li>Core deletion engine</li>
+        <li>Cross-platform CLI</li>
+        <li>Progress reporting</li>
+        <li>Basic age/pattern filters</li>
+        <li>Safety validation</li>
+      </ul>
+    </div>
+
+    <div class="pricing-card featured">
+      <h3>Pro</h3>
+      <div class="target">Professional developers</div>
+      <div class="price">$49 <small>perpetual</small></div>
+      <ul>
+        <li>Everything in Community</li>
+        <li>Secure deletion modes</li>
+        <li>Scheduled deletion jobs</li>
+        <li>Advanced filter expressions</li>
+        <li>Priority bug fixes</li>
+      </ul>
+    </div>
+
+    <div class="pricing-card">
+      <h3>Team</h3>
+      <div class="target">Dev teams (5-25 seats)</div>
+      <div class="price">$12 <small>/user/mo</small></div>
+      <ul>
+        <li>Everything in Pro</li>
+        <li>Central configuration</li>
+        <li>Team dashboard</li>
+        <li>CI/CD integrations</li>
+        <li>Shared policies</li>
+      </ul>
+    </div>
+
+    <div class="pricing-card">
+      <h3>Enterprise</h3>
+      <div class="target">Large organizations</div>
+      <div class="price">Custom</div>
+      <ul>
+        <li>Everything in Team</li>
+        <li>NIST 800-88 compliance</li>
+        <li>Certificates of destruction</li>
+        <li>SSO / LDAP integration</li>
+        <li>SLA support + policy engine</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 24px;">
+    <h3>Revenue Projections (Conservative)</h3>
+    <table>
+      <tr><th>Year</th><th>Community Users</th><th>Pro Licenses</th><th>Enterprise Contracts</th><th>Est. ARR</th></tr>
+      <tr><td>Year 1</td><td>5,000-10,000</td><td>100-300</td><td>0-2</td><td>$5K-15K</td></tr>
+      <tr><td>Year 2</td><td>25,000-50,000</td><td>500-1,500</td><td>5-15</td><td>$50K-200K</td></tr>
+      <tr><td>Year 3</td><td>100,000+</td><td>2,000-5,000</td><td>20-50</td><td>$200K-1M+</td></tr>
+    </table>
+    <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-dim);">A single enterprise contract at $10K-50K/year for a 500-seat organization dwarfs thousands of individual Pro licenses.</p>
+  </div>
+</section>
+
+<!-- SECTION 11: GTM -->
+<section id="gtm">
+  <h2 class="section-title">Go-To-Market Plan <span class="section-tag tag-strategy">STRATEGY</span></h2>
+  <p class="section-desc">Three-phase launch strategy from community adoption to enterprise sales.</p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <h4>Phase 1: Community Adoption</h4>
+      <p>Release FFD Community as open source (MIT or Apache 2.0). Publish to winget, Chocolatey, Scoop, Homebrew, GitHub Releases. Create benchmark content: "FFD vs rimraf vs del /s vs robocopy /MIR". Target the node_modules pain point. Set up GitHub Sponsors. Publish a GitHub Action for CI/CD pipeline cleanup.</p>
+    </div>
+
+    <div class="timeline-item">
+      <h4>Phase 2: Pro Launch</h4>
+      <p>Launch FFD Pro ($49 perpetual or $12-24/yr). Features: secure deletion modes, scheduling, advanced filters. Distribute via Gumroad/Paddle/LemonSqueezy. Content marketing: blog posts on CI/CD storage waste, deletion benchmarks.</p>
+    </div>
+
+    <div class="timeline-item">
+      <h4>Phase 3: Enterprise</h4>
+      <p>Launch FFD Enterprise with NIST 800-88 compliance, certificates of destruction, audit trails, SSO/LDAP, policy engine. Direct sales to regulated industries (healthcare, financial services, government). Target organizations paying for Blancco at a lower price with better performance.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Distribution Channels</h3>
+    <div class="grid-2">
+      <div>
+        <h4 style="color: var(--accent); margin-bottom: 8px;">Package Managers</h4>
+        <table>
+          <tr><td><strong>winget</strong></td><td>Windows (native, 9K+ packages)</td></tr>
+          <tr><td><strong>Chocolatey</strong></td><td>Windows (enterprise-focused, 10K+ packages)</td></tr>
+          <tr><td><strong>Scoop</strong></td><td>Windows (developer-oriented, no admin)</td></tr>
+          <tr><td><strong>Homebrew</strong></td><td>macOS/Linux (dominant on macOS)</td></tr>
+          <tr><td><strong>apt/yum/pacman</strong></td><td>Linux server deployments</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4 style="color: var(--accent); margin-bottom: 8px;">Direct & Enterprise</h4>
+        <table>
+          <tr><td><strong>GitHub Releases</strong></td><td>Primary download point</td></tr>
+          <tr><td><strong>Docker Hub</strong></td><td>CI/CD integration</td></tr>
+          <tr><td><strong>GitHub Actions</strong></td><td>Pipeline cleanup action</td></tr>
+          <tr><td><strong>Azure DevOps</strong></td><td>Marketplace extension</td></tr>
+          <tr><td><strong>MSI/MSIX</strong></td><td>Enterprise via SCCM/Intune</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 12: COMPLIANCE -->
+<section id="compliance">
+  <h2 class="section-title">Compliance Premium <span class="section-tag tag-compliance">COMPLIANCE</span></h2>
+  <p class="section-desc">The highest-margin feature area. Compliance-grade deletion commands premium pricing in regulated industries.</p>
+
+  <div class="card">
+    <h3>Standards & Certifications</h3>
+    <table>
+      <tr><th>Standard</th><th>Status</th><th>Relevance</th></tr>
+      <tr><td><strong>NIST SP 800-88</strong></td><td><span class="badge badge-success">Gold standard</span></td><td>Defines Clear/Purge/Destroy with verification. Referenced by government regulators worldwide.</td></tr>
+      <tr><td><strong>DoD 5220.22-M</strong></td><td><span class="badge badge-warning">Deprecated</span></td><td>Still referenced in RFPs. Brand recognition value but not recommended for SSDs.</td></tr>
+      <tr><td><strong>ISO 27001/27002</strong></td><td><span class="badge badge-info">Current</span></td><td>Control 8.10 covers information deletion. Enterprise compliance framework.</td></tr>
+      <tr><td><strong>GDPR Art. 17</strong></td><td><span class="badge badge-info">Active</span></td><td>"Right to erasure" &mdash; requires provable deletion with documentation.</td></tr>
+      <tr><td><strong>HIPAA</strong></td><td><span class="badge badge-info">Active</span></td><td>PHI disposal requirements for healthcare organizations.</td></tr>
+      <tr><td><strong>SOX, PCI-DSS, GLBA</strong></td><td><span class="badge badge-info">Active</span></td><td>Financial data retention and audit trail requirements.</td></tr>
+    </table>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Premium Compliance Features</h3>
+      <ul>
+        <li><strong>Certificate of Destruction</strong> &mdash; PDF/JSON with timestamp, file inventory, method, verification result, operator identity</li>
+        <li><strong>Verification passes</strong> &mdash; read-back to confirm unrecoverability</li>
+        <li><strong>Configurable sanitization</strong> &mdash; zero-fill (Clear), multi-pass overwrite (Purge), crypto erasure</li>
+        <li><strong>Audit log integration</strong> &mdash; Splunk, ELK, syslog, Windows Event Log</li>
+        <li><strong>Policy engine</strong> &mdash; retention rules, organizational standards enforcement</li>
+        <li><strong>Chain of custody</strong> &mdash; who initiated, who approved, when completed</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Why Enterprises Will Pay</h3>
+      <ul>
+        <li>A tamper-proof certificate of destruction pays for itself if it prevents one compliance incident</li>
+        <li>GDPR fines: EUR 5.88B cumulative through Jan 2025</li>
+        <li>Data destruction software market growing at 9.5-12.2% CAGR</li>
+        <li>GDPR compliance software market: $3.37B growing to $28.4B (23.8% CAGR)</li>
+        <li>Blancco charges premium pricing for exactly this &mdash; FFD can undercut with better performance</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warning">
+    <strong>Licensing Strategy:</strong> Don't start with a permissive license if you plan to restrict later &mdash; the HashiCorp/Redis community backlash was severe. Consider <strong>AGPL or BSL from the start</strong> to protect against cloud provider commoditization while remaining "source available." 67% of B2B SaaS companies now use hybrid monetization models.
+  </div>
+</section>
+
+<!-- SOURCES -->
+<section id="sources">
+  <h2 class="section-title">Sources</h2>
+  <p class="section-desc">Research backing for all findings in this report.</p>
+
+  <div class="card">
+    <h3>Performance & Technical</h3>
+    <div class="source-list">
+      <a href="https://iobureau.com/byenow/">byenow - IOCP-based fast deletion</a>
+      <a href="https://github.com/apankrat/byenow">byenow on GitHub</a>
+      <a href="https://ntdoc.m417z.com/ntdeletefile">NtDeleteFile - NtDoc</a>
+      <a href="https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_file_disposition_information_ex">FileDispositionInfoEx - MSDN</a>
+      <a href="https://man7.org/linux/man-pages/man3/io_uring_prep_unlinkat.3.html">io_uring_prep_unlinkat - man7</a>
+      <a href="https://kernel.dk/io_uring.pdf">Efficient IO with io_uring</a>
+      <a href="https://www.wholetomato.com/blog/how-to-query-file-attributes-50x-faster-on-windows/">Query File Attributes 50x Faster - WholeTomato</a>
+      <a href="https://devblogs.microsoft.com/oldnewthing/20131024-00/?p=2843">FIND_FIRST_EX_LARGE_FETCH - Old New Thing</a>
+      <a href="https://blog.s-schoener.com/2024-06-09-find-first-large-fetch/">LARGE_FETCH Benchmarks</a>
+      <a href="https://github.com/charlievieth/fastwalk">fastwalk - Parallel directory walk</a>
+      <a href="https://github.com/karrick/godirwalk">godirwalk - Fast directory walking</a>
+      <a href="https://github.com/golang/go/issues/64597">Go os.ReadDir buffer size issue</a>
+      <a href="https://victoriametrics.com/blog/go-sync-pool/">Go sync.Pool Mechanics</a>
+      <a href="https://mcyoung.xyz/2025/04/21/go-arenas/">Go Arenas</a>
+      <a href="https://www.josestg.com/posts/golang/boosting-string-and-bytes-conversions-speed-by-140x-with-zero-allocation-in-go/">Zero-Allocation String Conversions in Go</a>
+      <a href="https://www.usenix.org/conference/fast16/technical-sessions/presentation/yuan">Write-Optimized FS (USENIX FAST 2016 Best Paper)</a>
+      <a href="https://arxiv.org/html/2408.01805v1">Billion-files File Systems Comparison (2024)</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Market & Monetization</h3>
+    <div class="source-list">
+      <a href="https://www.verifiedmarketreports.com/product/data-destruction-software-market-size-and-forecast/">Data Destruction Software Market</a>
+      <a href="https://www.globalgrowthinsights.com/market-reports/gdpr-compliance-software-market-106212">GDPR Compliance Software Market</a>
+      <a href="https://www.futuremarketreport.com/industry-report/hipaa-compliance-software-market/">HIPAA Compliance Software Market</a>
+      <a href="https://www.globalgrowthinsights.com/market-reports/data-destruction-service-market-101294">Data Destruction Services Market</a>
+      <a href="https://cms.law/en/int/publication/gdpr-enforcement-tracker-report/numbers-and-figures">GDPR Enforcement Tracker 2025</a>
+      <a href="https://github.com/microsoft/Windows-Dev-Performance/issues/21">Windows Dev Performance - node_modules</a>
+      <a href="https://depot.dev/blog/how-to-reduce-cicd-costs-complete-optimization-guide">Reduce CI/CD Costs Guide</a>
+      <a href="https://www.avyka.com/post/cloud-waste-is-a-pipeline-problem-how-devops-practices-can-prevent-budget-drain">Cloud Waste Pipeline Problem</a>
+      <a href="https://www.getmonetizely.com/articles/whats-the-right-monetization-strategy-for-open-source-devtools">OSS DevTools Monetization</a>
+      <a href="https://www.getmonetizely.com/articles/software-monetization-models-and-strategies-for-2026-the-complete-guide">Software Monetization 2026</a>
+      <a href="https://www.getmonetizely.com/articles/what-pricing-model-do-developers-prefer-for-devops-tools">Developer Pricing Preferences</a>
+      <a href="https://www.hashicorp.com/en/pricing">HashiCorp Pricing</a>
+      <a href="https://ir.elastic.co/news/news-details/2025/Elastic-Reports-Fourth-Quarter-and-Fiscal-2025-Financial-Results/">Elastic FY2025 Results</a>
+      <a href="https://calebporzio.com/i-just-cracked-1-million-on-github-sponsors-heres-my-playbook">Porzio: $1M on GitHub Sponsors</a>
+      <a href="https://blancco.com/blancco-cost-bundles-pricing/">Blancco Pricing</a>
+      <a href="https://fastcopy.jp/pro/">FastCopy Pro License</a>
+      <a href="https://des3tech.com/blog/data-wiping-standards-compared/">NIST 800-88 vs DoD 5220.22-M</a>
+      <a href="https://www.goworkwize.com/blog/what-is-nist-800-88-guide">NIST 800-88 Guide</a>
+      <a href="https://www.isms.online/iso-27002/control-8-10-information-deletion/">ISO 27002 Control 8.10</a>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  FFD Research Report &middot; Generated by Claude &middot; February 4, 2026
+  <br>Based on codebase static analysis + web research across 50+ sources
+</footer>
+
+</body>
+</html>
