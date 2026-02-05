@@ -13,7 +13,7 @@ import (
 // made available to the frontend.
 // See https://pkg.go.dev/embed for more information.
 
-//go:embed frontend/dist
+//go:embed ../../frontend/dist
 var assets embed.FS
 
 func main() {
