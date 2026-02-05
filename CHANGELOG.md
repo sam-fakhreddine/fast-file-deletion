@@ -32,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reduced GC pause frequency by ~8x on 32GB systems
 - Lower CPU usage due to fewer GC cycles
 
+### Real-World Validation
+- Successfully deleted 1,023,444 files in 36m 39s (465 files/sec average)
+  - Age filter retained 354,700 files
+  - FileInfo method: 100% success rate (1,023,444/1,023,444)
+  - Bottleneck analysis: Disk I/O bound (no CPU, memory, or GC pressure)
+  - Memory usage peak: 649 MB (well below 95% threshold)
+  - Confirms expected behavior: filesystem is the limiting factor on large deletions
+
 ### Documentation
 - Updated README with v0.16 benchmarks and features
 - Added comprehensive Memory Management section

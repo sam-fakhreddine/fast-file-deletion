@@ -1,0 +1,192 @@
+/* Fast File Deletion - Windows 11 Global Styles */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Reset & Base Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Windows 11 Acrylic / Mica Effects
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Backdrop blur for modal overlays */
+.fui-Dialog__backdrop {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* Subtle acrylic effect for cards and panels */
+.fui-Card {
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border-radius: 8px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.08),
+    0 4px 8px rgba(0, 0, 0, 0.08),
+    0 8px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fui-Card:hover {
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.12),
+    0 8px 16px rgba(0, 0, 0, 0.12),
+    0 16px 32px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Dialog surface with proper elevation */
+.fui-DialogSurface {
+  border-radius: 12px;
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.14),
+    0 16px 32px rgba(0, 0, 0, 0.14),
+    0 32px 64px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Windows 11 Rounded Corners
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.fui-Button {
+  border-radius: 6px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fui-Input,
+.fui-Dropdown,
+.fui-SpinButton {
+  border-radius: 6px;
+}
+
+.fui-Accordion {
+  border-radius: 8px;
+}
+
+.fui-MessageBar {
+  border-radius: 8px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Smooth Transitions (Windows 11 Motion)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.fui-Button:hover {
+  transform: scale(1.02);
+}
+
+.fui-Button:active {
+  transform: scale(0.98);
+}
+
+/* Subtle fade-in animation for content */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fui-Card,
+.fui-MessageBar {
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Scrollbar Styling (Windows 11)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.4);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.6);
+  background-clip: padding-box;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Accessibility Enhancements
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--colorBrandForeground1, #0078d4);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .fui-Card {
+    border: 1px solid currentColor;
+  }
+
+  .fui-Button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Performance Optimizations
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* GPU acceleration for animations */
+.fui-Card,
+.fui-Button {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Prevent layout shift during animations */
+.fui-ProgressBar {
+  contain: layout style paint;
+}

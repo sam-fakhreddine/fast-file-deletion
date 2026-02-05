@@ -157,6 +157,91 @@ install:
 	@echo "Installing $(BINARY_NAME)..."
 	@go install $(LDFLAGS) ./cmd/fast-file-deletion
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# GUI TARGETS (Wails v3)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Install Wails CLI (required for GUI development)
+.PHONY: gui-install-wails
+gui-install-wails:
+	@echo "Installing Wails v3 CLI..."
+	@go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+	@echo "✓ Wails v3 installed at ~/go/bin/wails3"
+
+# Install frontend dependencies
+.PHONY: gui-deps
+gui-deps:
+	@echo "Installing frontend dependencies..."
+	@cd frontend && npm install
+	@echo "✓ Frontend dependencies installed"
+
+# Generate Wails bindings (TypeScript interfaces for Go backend)
+.PHONY: gui-bindings
+gui-bindings:
+	@echo "Generating Wails bindings..."
+	@cd cmd/ffd-gui && ~/go/bin/wails3 generate bindings
+	@cp -r cmd/ffd-gui/frontend/bindings frontend/
+	@echo "✓ Bindings generated and copied to frontend/"
+
+# Development mode with hot reload
+.PHONY: gui-dev
+gui-dev:
+	@echo "Starting GUI in development mode..."
+	@cd cmd/ffd-gui && ~/go/bin/wails3 dev
+
+# Build frontend only
+.PHONY: gui-build-frontend
+gui-build-frontend:
+	@echo "Building frontend..."
+	@cd frontend && npm run build
+	@echo "✓ Frontend built to frontend/dist/"
+
+# Build GUI for current platform (NOTE: Must run on target platform)
+.PHONY: gui-build
+gui-build: gui-build-frontend
+	@echo "Building GUI for current platform..."
+	@echo "NOTE: GUI apps with native WebView cannot be cross-compiled."
+	@echo "      Run this on Windows to build ffd-gui.exe"
+	@echo ""
+	@mkdir -p $(BUILD_DIR)
+	@rm -rf cmd/ffd-gui/build
+	@cd cmd/ffd-gui && ~/go/bin/wails3 build
+	@if [ -f cmd/ffd-gui/build/bin/ffd-gui.exe ]; then \
+		cp cmd/ffd-gui/build/bin/ffd-gui.exe $(BUILD_DIR)/ffd-gui.exe; \
+		echo "✓ GUI binary built: $(BUILD_DIR)/ffd-gui.exe"; \
+		ls -lh $(BUILD_DIR)/ffd-gui.exe; \
+	elif [ -f cmd/ffd-gui/build/bin/ffd-gui ]; then \
+		cp cmd/ffd-gui/build/bin/ffd-gui $(BUILD_DIR)/ffd-gui; \
+		echo "✓ GUI binary built: $(BUILD_DIR)/ffd-gui"; \
+		ls -lh $(BUILD_DIR)/ffd-gui; \
+	else \
+		echo "ERROR: Build output not found"; \
+		exit 1; \
+	fi
+
+# Clean GUI build artifacts
+.PHONY: gui-clean
+gui-clean:
+	@echo "Cleaning GUI build artifacts..."
+	@rm -rf frontend/dist
+	@rm -rf frontend/bindings
+	@rm -rf cmd/ffd-gui/frontend/bindings
+	@rm -rf cmd/ffd-gui/build
+	@rm -f $(BUILD_DIR)/ffd-gui.exe
+	@rm -f $(BUILD_DIR)/ffd-gui
+	@echo "✓ GUI artifacts cleaned"
+
+# Full GUI setup (first-time setup)
+.PHONY: gui-setup
+gui-setup: gui-install-wails gui-deps gui-bindings
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "✓ GUI setup complete!"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  make gui-dev        # Start development server"
+	@echo "  make gui-build      # Build production binary for Windows"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
 # Show help
 .PHONY: help
 help:
@@ -246,10 +331,31 @@ help:
 	@echo "                       → Use before creating releases"
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "GUI TARGETS (Wails v3)"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  First-Time Setup:"
+	@echo "    gui-setup            Complete GUI setup (install Wails, deps, bindings)"
+	@echo "    gui-install-wails    Install Wails v3 CLI tool"
+	@echo "    gui-deps             Install frontend dependencies (npm install)"
+	@echo "    gui-bindings         Generate TypeScript bindings for Go backend"
+	@echo ""
+	@echo "  Development:"
+	@echo "    gui-dev              Start development server with hot reload"
+	@echo "    gui-build-frontend   Build frontend only (dist/)"
+	@echo ""
+	@echo "  Production Build:"
+	@echo "    gui-build            Build GUI for current platform (run on Windows for .exe)"
+	@echo "                         Note: GUI apps cannot be cross-compiled"
+	@echo ""
+	@echo "  Maintenance:"
+	@echo "    gui-clean            Remove GUI build artifacts"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "OTHER TARGETS"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
-	@echo "  install              Install binary locally (go install)"
+	@echo "  install              Install CLI binary locally (go install)"
 	@echo "  help                 Show this help message"
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

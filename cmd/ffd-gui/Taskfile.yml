@@ -1,0 +1,48 @@
+version: '3'
+
+vars:
+  BINARY: ffd-gui
+
+tasks:
+  build:
+    desc: Build the application for current platform
+    cmds:
+      - go build -o build/bin/{{.BINARY}}{{if eq OS "windows"}}.exe{{end}} .
+
+  windows:build:
+    desc: Build for Windows
+    cmds:
+      - task: build
+        vars:
+          GOOS: windows
+          GOARCH: amd64
+    env:
+      GOOS: windows
+      GOARCH: amd64
+
+  darwin:build:
+    desc: Build for macOS
+    cmds:
+      - task: build
+    env:
+      GOOS: darwin
+      GOARCH: '{{if eq ARCH "arm64"}}arm64{{else}}amd64{{end}}'
+
+  linux:build:
+    desc: Build for Linux
+    cmds:
+      - task: build
+    env:
+      GOOS: linux
+      GOARCH: amd64
+
+  build:frontend:
+    desc: Build the frontend
+    dir: ../../frontend
+    cmds:
+      - npm run build
+
+  dev:
+    desc: Run in development mode
+    cmds:
+      - wails3 dev

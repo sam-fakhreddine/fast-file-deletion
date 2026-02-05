@@ -1,0 +1,16 @@
+{
+  "name": "ffd-gui",
+  "version": "0.16.0",
+  "outputfilename": "ffd-gui",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev": "npm run dev",
+  "frontend:dev:port": "auto",
+  "frontend:dev:open": false,
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Fast File Deletion",
+    "email": ""
+  },
+  "info": "High-performance file deletion tool with modern GUI"
+}

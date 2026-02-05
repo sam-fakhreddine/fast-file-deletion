@@ -169,8 +169,15 @@ func (ps *ParallelScanner) Scan() (*ScanResult, error) {
 // parallelScanWithFindFirstFileEx performs parallel directory traversal using FindFirstFileEx.
 // This is the core Windows-optimized scanning implementation.
 func (ps *ParallelScanner) parallelScanWithFindFirstFileEx() (*ScanResult, error) {
+	// Get absolute path for TOCTOU protection
+	absPath, err := filepath.Abs(ps.rootPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get absolute path: %w", err)
+	}
+
 	// Initialize result structure
 	result := &ScanResult{
+		ScannedPath: absPath,
 		Files:      make([]string, 0),
 		FilesUTF16: make([]*uint16, 0),
 	}

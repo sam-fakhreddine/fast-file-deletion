@@ -24,6 +24,7 @@ type Scanner struct {
 // It includes statistics about files scanned, files to delete, files retained,
 // and the total size of files to be deleted.
 type ScanResult struct {
+	ScannedPath    string        // Absolute path that was scanned (for TOCTOU protection)
 	Files          []string      // List of files to delete (bottom-up order)
 	FilesUTF16     []*uint16     // Pre-converted UTF-16 paths (Windows only)
 	IsDirectory    []bool        // Flags indicating if each path is a directory
@@ -78,7 +79,14 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 		return nil, fmt.Errorf("cannot access directory: %w", err)
 	}
 
+	// Get absolute path for TOCTOU protection
+	absPath, err := filepath.Abs(s.rootPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get absolute path: %w", err)
+	}
+
 	result := &ScanResult{
+		ScannedPath: absPath,
 		Files:       make([]string, 0),
 		IsDirectory: make([]bool, 0),
 	}
@@ -87,7 +95,7 @@ func (s *Scanner) Scan() (*ScanResult, error) {
 	directories := make([]string, 0)
 
 	// Walk the directory tree
-	err := filepath.WalkDir(s.rootPath, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(s.rootPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			// If we can't access a path, log it but continue
 			logger.LogFileWarning(path, fmt.Sprintf("Cannot access: %v", err))
