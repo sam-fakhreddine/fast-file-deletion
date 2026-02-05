@@ -202,6 +202,132 @@ jobs:
           retention-days: 30
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Create Release
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  release:
+    name: Build GUI (macOS)
+    runs-on: macos-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Generate Wails bindings
+        run: |
+          cd cmd/ffd-gui
+          ~/go/bin/wails3 generate bindings
+          cp -rf frontend/bindings ../../frontend/
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Build GUI
+        run: |
+          cd cmd/ffd-gui
+          ~/go/bin/wails3 build
+
+      - name: Copy binary to bin/
+        run: |
+          mkdir -p bin
+          cp cmd/ffd-gui/build/bin/ffd-gui bin/ffd-gui
+
+      - name: Upload macOS GUI
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-macos
+          path: bin/ffd-gui
+          retention-days: 30
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Build GUI for Linux
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  build-gui-linux:
+    name: Build GUI (Linux)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y webkit2gtk-4.0-dev libgtk-3-dev
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Generate Wails bindings
+        run: |
+          cd cmd/ffd-gui
+          ~/go/bin/wails3 generate bindings
+          cp -rf frontend/bindings ../../frontend/
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Build GUI
+        run: |
+          cd cmd/ffd-gui
+          ~/go/bin/wails3 build
+
+      - name: Copy binary to bin/
+        run: |
+          mkdir -p bin
+          cp cmd/ffd-gui/build/bin/ffd-gui bin/ffd-gui
+
+      - name: Upload Linux GUI
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-linux
+          path: bin/ffd-gui
+          retention-days: 30
+
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # Create Release (on tags only)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

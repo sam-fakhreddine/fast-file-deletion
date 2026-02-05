@@ -52,3 +52,7 @@ temp/
 
 # Temporary documentation and notes
 .internal/
+
+# Claude Code worktrees and project files
+fastDelete-task-*
+.kiro/
