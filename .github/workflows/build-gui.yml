@@ -83,11 +83,11 @@ jobs:
           retention-days: 30
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # Build GUI for Windows
+  # Build GUI for Windows (x64 and ARM64)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  build-gui-windows:
-    name: Build GUI (Windows)
+  build-gui-windows-amd64:
+    name: Build GUI (Windows x64)
     runs-on: windows-latest
     needs: test
     steps:
@@ -136,18 +136,76 @@ jobs:
           New-Item -ItemType Directory -Force -Path bin
           Copy-Item cmd/ffd-gui/build/bin/ffd-gui.exe bin/ffd-gui.exe
 
-      - name: Upload Windows GUI
+      - name: Upload Windows x64 GUI
         uses: actions/upload-artifact@v4
         with:
-          name: gui-windows
+          name: gui-windows-amd64
           path: bin/ffd-gui.exe
           retention-days: 30
 
+  build-gui-windows-arm64:
+    name: Build GUI (Windows ARM64)
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Generate Wails bindings
+        run: |
+          cd cmd/ffd-gui
+          wails3 generate bindings
+          Copy-Item -Recurse -Force frontend/bindings ../../frontend/
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Build GUI (ARM64)
+        run: |
+          cd cmd/ffd-gui
+          $env:GOARCH="arm64"
+          wails3 build
+
+      - name: Copy binary to bin/
+        run: |
+          New-Item -ItemType Directory -Force -Path bin
+          Copy-Item cmd/ffd-gui/build/bin/ffd-gui.exe bin/ffd-gui-arm64.exe
+
+      - name: Upload Windows ARM64 GUI
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-windows-arm64
+          path: bin/ffd-gui-arm64.exe
+          retention-days: 30
+
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # Build GUI for macOS
+  # Create Release
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  build-gui-macos:
+  release:
     name: Build GUI (macOS)
     runs-on: macos-latest
     needs: test
@@ -277,7 +335,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build-cli, build-gui-windows, build-gui-macos, build-gui-linux]
+    needs: [build-cli, build-gui-windows-amd64, build-gui-windows-arm64]
     if: github.event.inputs.create_release == 'true'
     permissions:
       contents: write
@@ -297,10 +355,9 @@ jobs:
           # CLI binaries
           cp artifacts/cli-binaries/* release/
 
-          # GUI binaries (rename for clarity)
-          cp artifacts/gui-windows/ffd-gui.exe release/ffd-gui-windows.exe
-          cp artifacts/gui-macos/ffd-gui release/ffd-gui-macos
-          cp artifacts/gui-linux/ffd-gui release/ffd-gui-linux
+          # GUI binaries (Windows only - x64 and ARM64)
+          cp artifacts/gui-windows-amd64/ffd-gui.exe release/ffd-gui-windows-amd64.exe
+          cp artifacts/gui-windows-arm64/ffd-gui-arm64.exe release/ffd-gui-windows-arm64.exe
 
           # Create checksums
           cd release
@@ -324,10 +381,9 @@ jobs:
 
           ### Downloads
 
-          #### GUI (Recommended for most users)
-          - **Windows**: `ffd-gui-windows.exe` (15-20 MB)
-          - **macOS**: `ffd-gui-macos` (15-20 MB)
-          - **Linux**: `ffd-gui-linux` (15-20 MB)
+          #### GUI (Windows only - recommended for most users)
+          - **Windows x64**: `ffd-gui-windows-amd64.exe` (15-20 MB)
+          - **Windows ARM64**: `ffd-gui-windows-arm64.exe` (15-20 MB)
 
           #### CLI (For automation and power users)
           - **Windows AMD64**: `fast-file-deletion-windows-amd64.exe`
@@ -401,7 +457,7 @@ jobs:
   summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [build-cli, build-gui-windows, build-gui-macos, build-gui-linux]
+    needs: [build-cli, build-gui-windows-amd64, build-gui-windows-arm64]
     if: always()
     steps:
       - name: Generate summary
@@ -412,9 +468,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Tests**: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **CLI Build**: ${{ needs.build-cli.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GUI Windows**: ${{ needs.build-gui-windows.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GUI macOS**: ${{ needs.build-gui-macos.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GUI Linux**: ${{ needs.build-gui-linux.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GUI Windows x64**: ${{ needs.build-gui-windows-amd64.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GUI Windows ARM64**: ${{ needs.build-gui-windows-arm64.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
