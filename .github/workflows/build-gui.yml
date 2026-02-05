@@ -36,10 +36,19 @@ jobs:
           cache: true
 
       - name: Run CLI tests
-        run: make test-thorough
+        run: TEST_INTENSITY=thorough go test $(go list ./... | grep -v '/cmd/ffd-gui')
 
-      - name: Verify cross-platform compilation
-        run: make verify-all
+      - name: Verify cross-platform compilation (CLI only)
+        run: |
+          echo "Verifying CLI compiles on all platforms..."
+          GOOS=windows GOARCH=amd64 go build -o /dev/null ./cmd/fast-file-deletion
+          echo "✓ Windows AMD64"
+          GOOS=linux GOARCH=amd64 go build -o /dev/null ./cmd/fast-file-deletion
+          echo "✓ Linux AMD64"
+          GOOS=darwin GOARCH=amd64 go build -o /dev/null ./cmd/fast-file-deletion
+          echo "✓ macOS AMD64"
+          GOOS=darwin GOARCH=arm64 go build -o /dev/null ./cmd/fast-file-deletion
+          echo "✓ macOS ARM64"
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # Build CLI for All Platforms
