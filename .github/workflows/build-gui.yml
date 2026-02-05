@@ -119,7 +119,7 @@ jobs:
         run: |
           cd cmd/ffd-gui
           wails3 generate bindings
-          Copy-Item -Recurse frontend/bindings ../../frontend/
+          Copy-Item -Recurse -Force frontend/bindings ../../frontend/
 
       - name: Build frontend
         run: |
@@ -180,7 +180,7 @@ jobs:
         run: |
           cd cmd/ffd-gui
           ~/go/bin/wails3 generate bindings
-          cp -r frontend/bindings ../../frontend/
+          cp -rf frontend/bindings ../../frontend/
 
       - name: Build frontend
         run: |
@@ -246,7 +246,7 @@ jobs:
         run: |
           cd cmd/ffd-gui
           ~/go/bin/wails3 generate bindings
-          cp -r frontend/bindings ../../frontend/
+          cp -rf frontend/bindings ../../frontend/
 
       - name: Build frontend
         run: |
