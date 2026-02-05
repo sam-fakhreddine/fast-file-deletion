@@ -36,7 +36,11 @@ jobs:
           cache: true
 
       - name: Run CLI tests
-        run: TEST_INTENSITY=thorough go test $(go list ./... | grep -v '/cmd/ffd-gui')
+        run: |
+          # Test all packages except GUI
+          TEST_INTENSITY=thorough go test \
+            ./internal/... \
+            ./cmd/fast-file-deletion/...
 
       - name: Verify cross-platform compilation (CLI only)
         run: |
