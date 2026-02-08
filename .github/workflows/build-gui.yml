@@ -76,7 +76,7 @@ jobs:
         run: make build-all
 
       - name: Upload CLI artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cli-binaries
           path: bin/fast-file-deletion-*
@@ -137,7 +137,7 @@ jobs:
           Copy-Item cmd/ffd-gui/build/bin/ffd-gui.exe bin/ffd-gui.exe
 
       - name: Upload Windows x64 GUI
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gui-windows-amd64
           path: bin/ffd-gui.exe
@@ -195,7 +195,7 @@ jobs:
           Copy-Item cmd/ffd-gui/build/bin/ffd-gui.exe bin/ffd-gui-arm64.exe
 
       - name: Upload Windows ARM64 GUI
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: gui-windows-arm64
           path: bin/ffd-gui-arm64.exe
