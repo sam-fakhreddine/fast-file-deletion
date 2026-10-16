@@ -3,6 +3,12 @@ module github.com/yourusername/fast-file-deletion
 go 1.25.5
 
 require (
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.67
+	golang.org/x/sys v0.45.0
+	pgregory.net/rapid v1.2.0
+)
+
+require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
@@ -36,12 +42,9 @@ require (
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.23 // indirect
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.67 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	pgregory.net/rapid v1.2.0 // indirect
 )
